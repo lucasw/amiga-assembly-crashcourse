@@ -100,14 +100,14 @@ mainloop:
   move.w d0,(a6)+    ; go into $dff0e8 BPL3PTH Bitplane pointer 3 (high 5 bits)
 
   ; colors, last 3 characters/12 bits are rgb
+  ; TODO(lucasw) replace with inc() command to get externally generated palette
   move.l #$01800000,(a6)+  ; color 0
-  move.l #$01820832,(a6)+  ; color 1
-  move.l #$0184036b,(a6)+  ; color 2
-  move.l #$01860667,(a6)+  ; color 3
-  move.l #$01880f53,(a6)+  ; color 4
-  move.l #$018a07ad,(a6)+  ; color 5
-  move.l #$018c0a60,(a6)+  ; color 6
-  move.l #$018e0fff,(a6)+  ; color 7
+  move.l #$01820fff,(a6)+  ; color 1
+  move.l #$01840800,(a6)+  ; color 2
+  move.l #$01860c00,(a6)+  ; color 3
+  move.l #$01880e03,(a6)+  ; color 4
+  move.l #$018a0ed0,(a6)+  ; color 5
+  move.l #$018c0e60,(a6)+  ; color 6
 
   move.l #32,d0 ; Number of iterations
   move.l #$07,d1 ; Current row wait
