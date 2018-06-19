@@ -99,8 +99,8 @@ mainloop:
 	move.w #$00e8,(a6)+	; HI-bits of start of bitplane
 	move.w d0,(a6)+		; go into $dff0e4
 
-	; colors
-	move.l #$01800fd3,(a6)+	; color 0
+	; colors, last 3 characters/12 bits are rgb
+	move.l #$01800f00,(a6)+	; color 0
 	move.l #$01820832,(a6)+	; color 1
 	move.l #$0184036b,(a6)+	; color 2
 	move.l #$01860667,(a6)+	; color 3
@@ -138,6 +138,7 @@ mainloop:
 	; end of copperlist
 	move.l #$fffffffe,(a6)+
 
+  ; TODO(lucasw) this isn't working
 	; if mousebutton/joystick 1 or 2 pressed then exit
 	btst.b #6,CIAAPRA
 	beq exit
@@ -211,6 +212,7 @@ gfxname: dc.b 'graphics.library',0
 	CNOP 0,4
 bitplanes:
   incbin "masters3.raw"
+  ; is this zero filling for alignment?
   blk.b 320/8*3*(200-160),0
 
 ; datalists aligned to 32-bit
