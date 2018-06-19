@@ -78,26 +78,26 @@ mainloop:
   ; bitplane 0
   move.l #bitplanes,d0
   move.w #$00e2,(a6)+  ; LO-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e2
+  move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
   swap d0
   move.w #$00e0,(a6)+  ; HI-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e0
+  move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
 
   ; bitplane 1
   move.l #bitplanes+40,d0
   move.w #$00e6,(a6)+  ; LO-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e6
+  move.w d0,(a6)+    ; go into $dff0e6 BPL2PTL  Bitplane pointer 2 (low 15 bits)
   swap d0
   move.w #$00e4,(a6)+  ; HI-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e4
+  move.w d0,(a6)+    ; go into $dff0e4 BPL2PTH  Bitplane pointer 2 (high 5 bits)
 
   ; bitplane 2
   move.l #bitplanes+80,d0
   move.w #$00ea,(a6)+  ; LO-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e6
+  move.w d0,(a6)+    ; go into $dff0ea BPL3PTL  Bitplane pointer 3 (low 15 bits) 
   swap d0
   move.w #$00e8,(a6)+  ; HI-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e4
+  move.w d0,(a6)+    ; go into $dff0e8 BPL3PTH Bitplane pointer 3 (high 5 bits)
 
   ; colors, last 3 characters/12 bits are rgb
   move.l #$01800a40,(a6)+  ; color 0
@@ -209,8 +209,9 @@ gfxname:
   Section ChipRAM,Data_c
   CNOP 0,4
 bitplanes:
-  incbin "masters3.raw"
-  ; is this zero filling for alignment?
+  ; incbin "masters3.raw"
+  incbin "temp.raw"
+  ; is the image 320 * 160 pixels, so filling in zeros for final 200-160 rows?
   blk.b 320/8*3*(200-160),0
   ; datalists aligned to 32-bit
   CNOP 0,4
