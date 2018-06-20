@@ -89,6 +89,14 @@ init:
   move.w #%1100000000000000,INTENA  ; IRQ set ON
   move.w #%0011111111111111,INTENA  ; IRQ set OFF
 
+  ; the ship sprite
+  move.l #SHIP_DST,a1
+  move.l #ship,a2
+  shiploop:
+    move.l (a2),(a1)+
+    cmp.l #$00000000,(a2)+
+    bne shiploop
+
 mainloop:
   move.l frame,d1
   move.l #copper,a6
@@ -119,18 +127,18 @@ mainloop:
   move.w #$00e8,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e8 BPL3PTH Bitplane pointer 3 (high 5 bits)
 
-  ; the ship sprite
-  move.l #SHIP_DST,a1
-  move.l #ship,a2
-  shiploop:
-    move.l (a2),(a1)+
-    cmp.l #$00000000,(a2)+
-    bne shiploop
   ; the dummy sprite
   move.l #$00000000,$30000
 
   ; setup sprite registers
   move.l #$25000,SPR0PTH     ; Sprite 0 pointer = $25000 actually used sprite
+  move.l #$30000,SPR1PTH     ; Sprite 1 pointer = $25000 actually used sprite
+  move.l #$30000,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
+  move.l #$30000,SPR3PTH     ; Sprite 3 pointer = $25000 actually used sprite
+  move.l #$30000,SPR4PTH     ; Sprite 4 pointer = $25000 actually used sprite
+  move.l #$30000,SPR5PTH     ; Sprite 5 pointer = $25000 actually used sprite
+  move.l #$30000,SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
+  move.l #$30000,SPR7PTH     ; Sprite 7 pointer = $25000 actually used sprite
 
   ; colors, last 3 characters/12 bits are rgb
   ; TODO(lucasw) replace with inc() command to get externally generated palette
@@ -152,9 +160,9 @@ mainloop:
   move.l #$019e0e60,(a6)+  ; color 15
   move.l #$01a00e60,(a6)+  ; color 16
   ; sprite 0
-  move.l #$01a20ff0,(a6)+  ; color 17
-  move.l #$01a400ff,(a6)+  ; color 18
-  move.l #$01a60f0f,(a6)+  ; color 19
+  move.l #$01a20890,(a6)+  ; color 17
+  move.l #$01a4009f,(a6)+  ; color 18
+  move.l #$01a60c08,(a6)+  ; color 19
 
   move.l #32,d0 ; Number of iterations
   move.l #$07,d1 ; Current row wait
