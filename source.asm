@@ -8,19 +8,39 @@ ADKCON    EQU    $dff09e
 INTENA    EQU    $dff09a
 INTREQ    EQU    $dff09c
 
-BPLCON0         EQU             $dff100
-BPLCON1         EQU             $dff102
-BPL1MOD         EQU             $dff108
-BPL2MOD         EQU             $dff10a
-DIWSTRT         EQU             $dff08e
-DIWSTOP         EQU             $dff090
-DDFSTRT         EQU             $dff092
-DDFSTOP         EQU             $dff094
-VPOSR           EQU             $dff004
-COP1LCH         EQU             $dff080
+BPLCON0    EQU             $dff100
+BPLCON1    EQU             $dff102
+BPL1MOD    EQU             $dff108
+BPL2MOD    EQU             $dff10a
+DIWSTRT    EQU             $dff08e
+DIWSTOP    EQU             $dff090
+DDFSTRT    EQU             $dff092
+DDFSTOP    EQU             $dff094
+VPOSR      EQU             $dff004
+COP1LCH    EQU             $dff080
 
-CIAAPRA         EQU             $bfe001
+CIAAPRA    EQU             $bfe001
 
+
+SPR0PTH EQU $dff120 ; Sprite 0 pointer (high 5 bits)
+SPR0PTL EQU $dff122 ; Sprite 0 pointer (low 15 bits)
+SPR1PTH EQU $dff124 ; Sprite 1 pointer (high 5 bits)
+SPR1PTL EQU $dff126 ; Sprite 1 pointer (low 15 bits)
+SPR2PTH EQU $dff128 ; Sprite 2 pointer (high 5 bits)
+SPR2PTL EQU $dff12A ; Sprite 2 pointer (low 15 bits)
+SPR3PTH EQU $dff12C ; Sprite 3 pointer (high 5 bits)
+SPR3PTL EQU $dff12E ; Sprite 3 pointer (low 15 bits)
+SPR4PTH EQU $dff130 ; Sprite 4 pointer (high 5 bits)
+SPR4PTL EQU $dff132 ; Sprite 4 pointer (low 15 bits)
+SPR5PTH EQU $dff134 ; Sprite 5 pointer (high 5 bits)
+SPR5PTL EQU $dff136 ; Sprite 5 pointer (low 15 bits)
+SPR6PTH EQU $dff138 ; Sprite 6 pointer (high 5 bits)
+SPR6PTL EQU $dff13A ; Sprite 6 pointer (low 15 bits)
+SPR7PTH EQU $dff13C ; Sprite 7 pointer (high 5 bits)
+SPR7PTL EQU $dff13E ; Sprite 7 pointer (low 15 bits)
+
+SHIP_DST EQU $25000
+; DUMMY_DST EQU $30000
 
 init:
   ; store data in hardwareregisters ORed with $8000
@@ -64,8 +84,8 @@ init:
   move.w #$c8d1,DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
   move.w #$0038,DDFSTRT      ; DDFSTRT
   move.w #$00d0,DDFSTOP      ; DDFSTOP
-  move.w #%1000000110000000,DMACON       ; DMA set ON
-  move.w #%0000000001111111,DMACON  ; DMA set OFF
+  move.w #%1000000110100000,DMACON  ; DMA set ON
+  move.w #%0000000001011111,DMACON  ; DMA set OFF
   move.w #%1100000000000000,INTENA  ; IRQ set ON
   move.w #%0011111111111111,INTENA  ; IRQ set OFF
 
@@ -99,6 +119,19 @@ mainloop:
   move.w #$00e8,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e8 BPL3PTH Bitplane pointer 3 (high 5 bits)
 
+  ; the ship sprite
+  move.l #SHIP_DST,a1
+  move.l #ship,a2
+  shiploop:
+    move.l (a2),(a1)+
+    cmp.l #$00000000,(a2)+
+    bne shiploop
+  ; the dummy sprite
+  move.l #$00000000,$30000
+
+  ; setup sprite registers
+  move.l #$25000,SPR0PTH     ; Sprite 0 pointer = $25000 actually used sprite
+
   ; colors, last 3 characters/12 bits are rgb
   ; TODO(lucasw) replace with inc() command to get externally generated palette
   move.l #$01800000,(a6)+  ; color 0
@@ -108,6 +141,20 @@ mainloop:
   move.l #$01880e03,(a6)+  ; color 4
   move.l #$018a0ed0,(a6)+  ; color 5
   move.l #$018c0e60,(a6)+  ; color 6
+  move.l #$018e0e60,(a6)+  ; color 7
+  move.l #$01900e60,(a6)+  ; color 8
+  move.l #$01920e60,(a6)+  ; color 9
+  move.l #$01940e60,(a6)+  ; color 10
+  move.l #$01960e60,(a6)+  ; color 11
+  move.l #$01980e60,(a6)+  ; color 12
+  move.l #$019a0e60,(a6)+  ; color 13
+  move.l #$019c0e60,(a6)+  ; color 14
+  move.l #$019e0e60,(a6)+  ; color 15
+  move.l #$01a00e60,(a6)+  ; color 16
+  ; sprite 0
+  move.l #$01a20ff0,(a6)+  ; color 17
+  move.l #$01a400ff,(a6)+  ; color 18
+  move.l #$01a60f0f,(a6)+  ; color 19
 
   move.l #32,d0 ; Number of iterations
   move.l #$07,d1 ; Current row wait
@@ -208,6 +255,19 @@ gfxname:
   dc.b 'graphics.library',0
   Section ChipRAM,Data_c
   CNOP 0,4
+
+; adapted from http://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node02D2.html
+; Sprite data for spaceship sprite
+; TODO(lucasw) load this from raw file
+ship:
+  dc.w    $6D60,$7200             ;VSTART, HSTART, VSTOP
+  dc.w    $0990,$07E0             ;First pair of descriptor words
+  dc.w    $13C8,$0FF0
+  dc.w    $23C4,$1FF8
+  dc.w    $13C8,$0FF0
+  dc.w    $0990,$07E0
+  CNOP 4,4             ; End of sprite data
+
 bitplanes:
   ; incbin "masters3.raw"
   incbin "temp.raw"
@@ -216,6 +276,6 @@ bitplanes:
   ; datalists aligned to 32-bit
   CNOP 0,4
 copper:
-  dc.l $ffffffe
+  dc.l $ffffffe ; end of copper list
   blk.l 1023,0
 
