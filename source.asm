@@ -40,7 +40,7 @@ SPR7PTH EQU $dff13C ; Sprite 7 pointer (high 5 bits)
 SPR7PTL EQU $dff13E ; Sprite 7 pointer (low 15 bits)
 
 SHIP_DST EQU $25000
-; DUMMY_DST EQU $30000
+DUMMY_DST EQU $30000
 
 init:
   ; store data in hardwareregisters ORed with $8000
@@ -97,6 +97,9 @@ init:
     cmp.l #$00000000,(a2)+
     bne shiploop
 
+  ; the dummy sprite
+  move.l #$00000000,DUMMY_DST
+
 mainloop:
   move.l frame,d1
   move.l #copper,a6
@@ -127,18 +130,15 @@ mainloop:
   move.w #$00e8,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e8 BPL3PTH Bitplane pointer 3 (high 5 bits)
 
-  ; the dummy sprite
-  move.l #$00000000,$30000
-
   ; setup sprite registers
-  move.l #$25000,SPR0PTH     ; Sprite 0 pointer = $25000 actually used sprite
-  move.l #$30000,SPR1PTH     ; Sprite 1 pointer = $25000 actually used sprite
-  move.l #$30000,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
-  move.l #$30000,SPR3PTH     ; Sprite 3 pointer = $25000 actually used sprite
-  move.l #$30000,SPR4PTH     ; Sprite 4 pointer = $25000 actually used sprite
-  move.l #$30000,SPR5PTH     ; Sprite 5 pointer = $25000 actually used sprite
-  move.l #$30000,SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
-  move.l #$30000,SPR7PTH     ; Sprite 7 pointer = $25000 actually used sprite
+  move.l #SHIP_DST,SPR0PTH     ; Sprite 0 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR1PTH     ; Sprite 1 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR3PTH     ; Sprite 3 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR4PTH     ; Sprite 4 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR5PTH     ; Sprite 5 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR7PTH     ; Sprite 7 pointer = $25000 actually used sprite
 
   ; colors, last 3 characters/12 bits are rgb
   ; TODO(lucasw) replace with inc() command to get externally generated palette
