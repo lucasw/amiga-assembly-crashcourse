@@ -39,6 +39,7 @@ SPR6PTL EQU $dff13A ; Sprite 6 pointer (low 15 bits)
 SPR7PTH EQU $dff13C ; Sprite 7 pointer (high 5 bits)
 SPR7PTL EQU $dff13E ; Sprite 7 pointer (low 15 bits)
 
+; DMA memory?  What is the range?
 SHIP_DST EQU $25000
 DUMMY_DST EQU $30000
 
@@ -106,6 +107,9 @@ mainloop:
   addq.l #1,d1
   move.l d1,frame
 
+  ; write instructions into copperlist
+  ; TODO(lucasw) couldn't this be done once if they aren't changing?
+
   ; bitplane 0
   move.l #bitplanes,d0
   move.w #$00e2,(a6)+  ; LO-bits of start of bitplane
@@ -130,16 +134,6 @@ mainloop:
   move.w #$00e8,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e8 BPL3PTH Bitplane pointer 3 (high 5 bits)
 
-  ; setup sprite registers
-  move.l #SHIP_DST,SPR0PTH     ; Sprite 0 pointer = $25000 actually used sprite
-  move.l #DUMMY_DST,SPR1PTH     ; Sprite 1 pointer = $25000 actually used sprite
-  move.l #DUMMY_DST,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
-  move.l #DUMMY_DST,SPR3PTH     ; Sprite 3 pointer = $25000 actually used sprite
-  move.l #DUMMY_DST,SPR4PTH     ; Sprite 4 pointer = $25000 actually used sprite
-  move.l #DUMMY_DST,SPR5PTH     ; Sprite 5 pointer = $25000 actually used sprite
-  move.l #DUMMY_DST,SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
-  move.l #DUMMY_DST,SPR7PTH     ; Sprite 7 pointer = $25000 actually used sprite
-
   ; colors, last 3 characters/12 bits are rgb
   ; TODO(lucasw) replace with inc() command to get externally generated palette
   move.l #$01800000,(a6)+  ; color 0
@@ -163,6 +157,8 @@ mainloop:
   move.l #$01a20890,(a6)+  ; color 17
   move.l #$01a4009f,(a6)+  ; color 18
   move.l #$01a60c08,(a6)+  ; color 19
+  ; TODO(lucasw) unless wanting to cycle colors, could store the address
+  ; at end of static copper list and then use it below for dynamic copper list stuff?
 
   move.l #32,d0 ; Number of iterations
   move.l #$07,d1 ; Current row wait
@@ -192,6 +188,27 @@ mainloop:
 
   ; end of copperlist
   move.l #$fffffffe,(a6)+
+
+  ; setup sprite registers, have to be setup every vblank
+  move.l #SHIP_DST,SPR0PTH     ; Sprite 0 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR1PTH     ; Sprite 1 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR3PTH     ; Sprite 3 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR4PTH     ; Sprite 4 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR5PTH     ; Sprite 5 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR7PTH     ; Sprite 7 pointer = $25000 actually used sprite
+
+  ; animate the sprite
+  ; first load the current x position (from ship address) into a data register
+  move.w SHIP_DST,d0
+  ; add 1
+  addi.w #1,d0
+  andi.w #$00ff,d0
+  ; AND with 0xff00?
+  ; then write it back to the the ship address - it is the first word
+  and.w #$ff00,SHIP_DST
+  or.w d0,SHIP_DST
 
   ; if mousebutton/joystick 1 or 2 pressed then exit
   btst.b #6,CIAAPRA
