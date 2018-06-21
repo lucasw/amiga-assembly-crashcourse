@@ -97,9 +97,11 @@ init:
   ; the ship sprite
   move.l #SHIP_DST,a1
   move.l #ship_data,a2
+  move.w #31,d0
   shiploop:
-    move.l (a2),(a1)+
-    cmp.l #$00000000,(a2)+
+    move.l (a2)+,(a1)+
+    sub.w #1,d0
+    cmp.w #$0,d0
     bne shiploop
 
   ; the dummy sprite
@@ -141,9 +143,9 @@ mainloop:
   ; colors, last 3 characters/12 bits are rgb
   ; TODO(lucasw) replace with inc() command to get externally generated palette
   move.l #$01800000,(a6)+  ; color 0
-  move.l #$01820fff,(a6)+  ; color 1
-  move.l #$01840800,(a6)+  ; color 2
-  move.l #$01860c00,(a6)+  ; color 3
+  move.l #$01820666,(a6)+  ; color 1
+  move.l #$01840890,(a6)+  ; color 2
+  move.l #$01860450,(a6)+  ; color 3
   move.l #$01880e03,(a6)+  ; color 4
   move.l #$018a0ed0,(a6)+  ; color 5
   move.l #$018c0e60,(a6)+  ; color 6
@@ -157,10 +159,10 @@ mainloop:
   move.l #$019c0e60,(a6)+  ; color 14
   move.l #$019e0e60,(a6)+  ; color 15
   move.l #$01a00e60,(a6)+  ; color 16
-  ; sprite 0
-  move.l #$01a20890,(a6)+  ; color 17
-  move.l #$01a4009f,(a6)+  ; color 18
-  move.l #$01a60c08,(a6)+  ; color 19
+  ; sprite 0 - the ship
+  move.l #$01a20000,(a6)+  ; color 17
+  move.l #$01a40a44,(a6)+  ; color 18
+  move.l #$01a60fff,(a6)+  ; color 19
   ; TODO(lucasw) unless wanting to cycle colors, could store the address
   ; at end of static copper list and then use it below for dynamic copper list stuff?
 
@@ -195,7 +197,7 @@ mainloop:
 
   ; setup sprite registers, have to be setup every vblank
   move.l #SHIP_DST,SPR0PTH     ; Sprite 0 pointer = $25000 actually used sprite
-  move.l #DUMMY_DST,SPR1PTH     ; Sprite 1 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR1PTH     ; Sprite 1 pointer = $30000 dummy sprite
   move.l #DUMMY_DST,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR3PTH     ; Sprite 3 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR4PTH     ; Sprite 4 pointer = $25000 actually used sprite
@@ -344,21 +346,17 @@ gfxname:
   Section ChipRAM,Data_c
   CNOP 0,4
 
+; no bitplanes for sprites, just the raw data of indices to the palette
 ; adapted from http://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node02D2.html
 ; Sprite data for spaceship sprite
 ; TODO(lucasw) load this from raw file
 ship_data:
-  dc.w    $7D60,$8200             ;VSTART, HSTART, VSTOP
-  dc.w    $0990,$07E0             ;First pair of descriptor words
-  dc.w    $13C8,$0FF0
-  dc.w    $23C4,$1FF8
-  dc.w    $13C8,$0FF0
-  dc.w    $0990,$07E0
-  CNOP 4,4             ; End of sprite data
+  dc.w    $7060,$9000             ;VSTART, HSTART, VSTOP
+  incbin "gimp/ship.data.raw"
+  CNOP 0,4             ; End of sprite data
 
 bitplanes:
-  ; incbin "masters3.raw"
-  incbin "temp.raw"
+  incbin "gimp/indexed_color_amiga.data.raw"
   ; is the image 320 * 160 pixels, so filling in zeros for final 200-160 rows?
   blk.b 320/8*3*(200-160),0
   ; datalists aligned to 32-bit
