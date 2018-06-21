@@ -96,7 +96,7 @@ init:
 
   ; the ship sprite
   move.l #SHIP_DST,a1
-  move.l #ship,a2
+  move.l #ship_data,a2
   shiploop:
     move.l (a2),(a1)+
     cmp.l #$00000000,(a2)+
@@ -220,8 +220,6 @@ mainloop:
   ; debug command, use w 0 100 2 to set a breakpoint here
   clr.w $100
 
-  move.w #0,d2
-  move.w #0,d3
   ; detect joystick left/right
   ; move.w JOY1DAT,d2
   ; btst.l #9,d2
@@ -236,54 +234,42 @@ mainloop:
   move.l d0,d1
   add.l d1,d1
   eor.l d0,d1
-  btst.l #9,d0  ; left
-  bne move_left
-  btst.l #1,d0  ; right
-  bne move_right
-  bra joy_up_down
-  move_left:
-    move.w #-1,d2
-    bra joy_up_down
-  move_right:
-    move.w #1,d2
-  joy_up_down:
 
-  btst.l #9,d1  ; up
-  bne move_up
-  btst.l #1,d1  ; down
-  bne move_down
-  bra done_joy
-  move_up:
+  ; d2 is the left/right move value
+  move.w #0,d2
+  ; d3 is the up/down move value
+  move.w #0,d3
+
+  test_left:
+    btst.l #9,d0
+    bne move_left
+    bra test_right
+    move_left:
+      add.w #-1,d2
+  test_right:
+    btst.l #1,d0
+    bne move_right
+    bra test_up
+    move_right:
+      add.w #1,d2
+  test_up:
+    btst.l #9,d1
+    bne move_up
+    bra test_down
+    move_up:
+      add.w #-$1,d3
+  test_down:
+    btst.l #1,d1
+    bne move_down
     bra done_joy
-  move_down:
-    move.w #$100,d3
+    move_down:
+      add.w #$1,d3
   done_joy:
-    move.w #-$100,d3
 
   ship_update:
-  ; animate the sprite
-  ; first load the current x position (from ship address) into a data register
-  move.w SHIP_DST,d0
-  add.w d2,d0
-  andi.w #$00ff,d0
-  ; then write it back to the the ship address - it is the first word
-  and.w #$ff00,SHIP_DST ; first zero the bits to be used for the new position
-  or.w d0,SHIP_DST
-
-  bra skip
-  ; move vertically
-  move.w SHIP_DST,d0
-  add.l d3,d0
-  andi.l #$ff00,d0
-  and.l #$00ff,SHIP_DST
-  or.l d0,SHIP_DST
-
-  move.w SHIP_DST+1,d0
-  add.l d3,d0
-  andi.l #$ff00,d0
-  and.l #$00ff,SHIP_DST+1
-  or.l d0,SHIP_DST+1
-  skip:
+  add.b d2,SHIP_DST+1  ; The offset must be relative to the .b/.w/.l size
+  add.b d3,SHIP_DST
+  add.b d3,SHIP_DST+2
 
   ; if mousebutton/joystick 1 or 2 pressed then exit
   ; mouse/joy button 1
@@ -361,8 +347,8 @@ gfxname:
 ; adapted from http://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node02D2.html
 ; Sprite data for spaceship sprite
 ; TODO(lucasw) load this from raw file
-ship:
-  dc.w    $6D60,$7200             ;VSTART, HSTART, VSTOP
+ship_data:
+  dc.w    $7D60,$8200             ;VSTART, HSTART, VSTOP
   dc.w    $0990,$07E0             ;First pair of descriptor words
   dc.w    $13C8,$0FF0
   dc.w    $23C4,$1FF8
