@@ -1,6 +1,12 @@
 
 https://gist.github.com/lucasw/47f4041f79aea451c186870c33af4019
 
+## FS-UAE
+
+Load first save state of fsuae_config from command line:
+```
+fs-uae  Documents/FS-UAE/Configurations/fsuae_config.fs-uae --load_state=1
+```
 
 ## asm syntax highlighting in vim
 

@@ -21,6 +21,10 @@ COP1LCH    EQU             $dff080
 
 CIAAPRA    EQU             $bfe001
 
+CIAASDR    EQU             $bfec01
+
+JOY0DAT EQU $dff00a
+JOY1DAT EQU $dff00c
 
 SPR0PTH EQU $dff120 ; Sprite 0 pointer (high 5 bits)
 SPR0PTL EQU $dff122 ; Sprite 0 pointer (low 15 bits)
@@ -199,11 +203,46 @@ mainloop:
   move.l #DUMMY_DST,SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR7PTH     ; Sprite 7 pointer = $25000 actually used sprite
 
+  ; detect key press, use special keys for now
+  ;cmp.b #$37,SKEYS  ; shift left
+  ;beq move_left
+  ;cmp.b #$3d,SKEYS  ; shift right
+  ;beq move_right
+  ;move.w #0,d1
+  ;bra done_keys
+  ;move_left:
+  ;  move.w #-1,d1
+  ;  bra done_keys
+  ;move_right:
+  ;  move.w #1,d1
+  ;done_keys:
+
+  ; debug command, use w 0 100 2 to set a breakpoint here
+  clr.w $100
+
+  ; detect joystick left/right
+  move.w #0,d1
+  ; move.l #%100000010,d2
+  ; and.l JOY1DAT,d2
+  move.w JOY1DAT,d2
+  btst.l #9,d2
+  bne move_left
+  btst.l #1,d2
+  bne move_right
+  ; bra done_joy
+  jmp done_joy
+  move_left:
+    move.w #-1,d1
+    bra done_joy
+  move_right:
+    move.w #1,d1
+  done_joy:
+
   ; animate the sprite
   ; first load the current x position (from ship address) into a data register
   move.w SHIP_DST,d0
   ; add 1
-  addi.w #1,d0
+  add.w d1,d0
   andi.w #$00ff,d0
   ; AND with 0xff00?
   ; then write it back to the the ship address - it is the first word
@@ -211,10 +250,12 @@ mainloop:
   or.w d0,SHIP_DST
 
   ; if mousebutton/joystick 1 or 2 pressed then exit
+  ; mouse/joy button 1
   btst.b #6,CIAAPRA
   beq exit
-  btst.b #7,CIAAPRA
-  beq exit
+  ; mouse/joy button 2
+  ; btst.b #7,CIAAPRA
+  ; beq exit
 
 ; Wait for vertical blanking before taking the copper list into use
 waitVB:
