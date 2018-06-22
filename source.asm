@@ -103,14 +103,14 @@ init:
   ; the ship sprite
   move.l #SHIP_DST,a1
   move.l #ship_data,a2
-  move.w #31,d0
+  move.w #32,d0
   shiploop:
     move.l (a2)+,(a1)+
     dbra d0,shiploop
 
   move.l #FIREBALL_DST,a1
   move.l #fireball_data,a2
-  move.w #7,d0
+  move.w #8,d0
   fireballloop:
     move.l (a2)+,(a1)+
     dbra d0,fireballloop
@@ -169,15 +169,21 @@ mainloop:
   move.l #$019a0e60,(a6)+  ; color 13
   move.l #$019c0e60,(a6)+  ; color 14
   move.l #$019e0e60,(a6)+  ; color 15
-  move.l #$01a00e60,(a6)+  ; color 16
   ; sprite 0,1 - the ship
+  move.l #$01a00000,(a6)+  ; color 16
   move.l #$01a20000,(a6)+  ; color 17
   move.l #$01a40a44,(a6)+  ; color 18
   move.l #$01a60fff,(a6)+  ; color 19
   ; sprite 2,3 the fireball
-  move.l #$01a80fd0,(a6)+  ; color 20
-  move.l #$01aa0ffc,(a6)+  ; color 21
-  move.l #$01ac0fff,(a6)+  ; color 22
+  move.l #$01a80000,(a6)+  ; color 20
+  move.l #$01aa0fd0,(a6)+  ; color 21
+  move.l #$01ac0ffc,(a6)+  ; color 22
+  move.l #$01ae0fff,(a6)+  ; color 23
+  ; sprite 4,5
+  ; move.l #$01a80fd0,(a6)+  ; color 25
+  ; move.l #$01aa0ffc,(a6)+  ; color 26
+  ; move.l #$01ac0fff,(a6)+  ; color 27
+  ; move.l #$01ac0fff,(a6)+  ; color 27
   ; TODO(lucasw) unless wanting to cycle colors, could store the address
   ; at end of static copper list and then use it below for dynamic copper list stuff?
 
@@ -283,21 +289,28 @@ mainloop:
       add.w #$1,d3
   done_joy:
 
-  ship_update:
+ship_update:
   add.b d2,SHIP_DST+1  ; HSTART The offset is relative to the .b/.w/.l size
   add.b d3,SHIP_DST    ; VSTART
   add.b d3,SHIP_DST+2  ; VSTOP
 
-  ; update fireball
+test_fireball:
+  move.l #0,d0
+  move.b FIREBALL_DST+1,d0
+  cmp.w #250,d0  ; FIREBALL_DST+1
+  bge shoot_fireball
+update_fireball:
   add.b #2,FIREBALL_DST+1
+  bra mouse_test
 
+shoot_fireball:
   ; shoot the fireball at the current ship location
   ; mouse/joy button 2
   btst.b #7,CIAAPRA
   bne mouse_test
   ; copy the ship location first
   move.l (SHIP_DST),(FIREBALL_DST)
-  add.b #4,FIREBALL_DST+1 ; offset the hstart to the front of the ship
+  add.b #2,FIREBALL_DST+1 ; offset the hstart to the front of the ship
   add.b #12,FIREBALL_DST  ; offset the start position to so fire from middle of ship
   ; the fireball vstop needs to be reset to vstart then the height of the fireball added
   move.b FIREBALL_DST,FIREBALL_DST+2  ; VSTOP
@@ -385,7 +398,7 @@ ship_data:
   incbin "gimp/ship.data.raw"
   CNOP 4,4             ; End of sprite data
 fireball_data:
-  dc.w    $0000,$1000             ;VSTART, HSTART, VSTOP
+  dc.w    $00ff,$1000             ;VSTART, HSTART, VSTOP
   incbin "gimp/fireball.data.raw"
   CNOP 4,4             ; End of sprite data
 bitplanes:
