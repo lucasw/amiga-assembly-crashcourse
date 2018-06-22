@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright 2018 Lucas Walter
-# Convert a Gimp 8-color raw data r,g,b to an Amiga image in a 3-bit plane raw format
+# Convert a Gimp 8-color raw data r,g,b to an Amiga image in a n-bit plane raw format
 # Needs to be 19200 bytes
 # Is that:
 # 320*160* 3 bits/pixel / 8 bits/bytes
@@ -8,6 +8,10 @@
 
 
 format = '''
+
+convert a 4 color sprite:
+./convert_gimp_raw_bit_planes.py image.data 16 2
+
          bit plane 0  | bit plane 1  | bit plane 2
 row 0    8pixels/byte
 ...

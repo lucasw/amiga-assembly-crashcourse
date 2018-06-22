@@ -1,3 +1,5 @@
+; registers
+
 DMACONR    EQU    $dff002
 ADKCONR    EQU    $dff010
 INTENAR    EQU    $dff01c
@@ -43,8 +45,11 @@ SPR6PTL EQU $dff13A ; Sprite 6 pointer (low 15 bits)
 SPR7PTH EQU $dff13C ; Sprite 7 pointer (high 5 bits)
 SPR7PTL EQU $dff13E ; Sprite 7 pointer (low 15 bits)
 
-; DMA memory?  What is the range?
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; DMA memory is 0x0 - 0x7FFFF
 SHIP_DST EQU $25000
+FIREBALL_DST EQU $25000+ship_data-fireball_data
 DUMMY_DST EQU $30000
 
 init:
@@ -94,15 +99,21 @@ init:
   move.w #%1100000000000000,INTENA  ; IRQ set ON
   move.w #%0011111111111111,INTENA  ; IRQ set OFF
 
+  ; TODO(lucasw) make this general for loading any sprite
   ; the ship sprite
   move.l #SHIP_DST,a1
   move.l #ship_data,a2
   move.w #31,d0
   shiploop:
     move.l (a2)+,(a1)+
-    sub.w #1,d0
-    cmp.w #$0,d0
-    bne shiploop
+    dbra d0,shiploop
+
+  move.l #FIREBALL_DST,a1
+  move.l #fireball_data,a2
+  move.w #7,d0
+  fireballloop:
+    move.l (a2)+,(a1)+
+    dbra d0,fireballloop
 
   ; the dummy sprite
   move.l #$00000000,DUMMY_DST
@@ -159,10 +170,14 @@ mainloop:
   move.l #$019c0e60,(a6)+  ; color 14
   move.l #$019e0e60,(a6)+  ; color 15
   move.l #$01a00e60,(a6)+  ; color 16
-  ; sprite 0 - the ship
+  ; sprite 0,1 - the ship
   move.l #$01a20000,(a6)+  ; color 17
   move.l #$01a40a44,(a6)+  ; color 18
   move.l #$01a60fff,(a6)+  ; color 19
+  ; sprite 2,3 the fireball
+  move.l #$01a80fd0,(a6)+  ; color 20
+  move.l #$01aa0ffc,(a6)+  ; color 21
+  move.l #$01ac0fff,(a6)+  ; color 22
   ; TODO(lucasw) unless wanting to cycle colors, could store the address
   ; at end of static copper list and then use it below for dynamic copper list stuff?
 
@@ -198,7 +213,7 @@ mainloop:
   ; setup sprite registers, have to be setup every vblank
   move.l #SHIP_DST,SPR0PTH     ; Sprite 0 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR1PTH     ; Sprite 1 pointer = $30000 dummy sprite
-  move.l #DUMMY_DST,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
+  move.l #FIREBALL_DST,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR3PTH     ; Sprite 3 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR4PTH     ; Sprite 4 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR5PTH     ; Sprite 5 pointer = $25000 actually used sprite
@@ -220,7 +235,7 @@ mainloop:
   ;done_keys:
 
   ; debug command, use w 0 100 2 to set a breakpoint here
-  clr.w $100
+  ;clr.w $100
 
   ; detect joystick left/right
   ; move.w JOY1DAT,d2
@@ -269,15 +284,30 @@ mainloop:
   done_joy:
 
   ship_update:
-  add.b d2,SHIP_DST+1  ; The offset must be relative to the .b/.w/.l size
-  add.b d3,SHIP_DST
-  add.b d3,SHIP_DST+2
+  add.b d2,SHIP_DST+1  ; HSTART The offset is relative to the .b/.w/.l size
+  add.b d3,SHIP_DST    ; VSTART
+  add.b d3,SHIP_DST+2  ; VSTOP
 
+  ; update fireball
+  add.b #2,FIREBALL_DST+1
+
+  ; shoot the fireball at the current ship location
+  ; mouse/joy button 2
+  btst.b #7,CIAAPRA
+  bne mouse_test
+  ; copy the ship location first
+  move.l (SHIP_DST),(FIREBALL_DST)
+  add.b #4,FIREBALL_DST+1 ; offset the hstart to the front of the ship
+  add.b #12,FIREBALL_DST  ; offset the start position to so fire from middle of ship
+  ; the fireball vstop needs to be reset to vstart then the height of the fireball added
+  move.b FIREBALL_DST,FIREBALL_DST+2  ; VSTOP
+  add.b #8,FIREBALL_DST+2
+
+mouse_test:
   ; if mousebutton/joystick 1 or 2 pressed then exit
   ; mouse/joy button 1
   btst.b #6,CIAAPRA
   beq exit
-  ; mouse/joy button 2
   ; btst.b #7,CIAAPRA
   ; beq exit
 
@@ -353,11 +383,14 @@ gfxname:
 ship_data:
   dc.w    $7060,$9000             ;VSTART, HSTART, VSTOP
   incbin "gimp/ship.data.raw"
-  CNOP 0,4             ; End of sprite data
-
+  CNOP 4,4             ; End of sprite data
+fireball_data:
+  dc.w    $0000,$1000             ;VSTART, HSTART, VSTOP
+  incbin "gimp/fireball.data.raw"
+  CNOP 4,4             ; End of sprite data
 bitplanes:
   incbin "gimp/indexed_color_amiga.data.raw"
-  ; is the image 320 * 160 pixels, so filling in zeros for final 200-160 rows?
+  ; is the image 320 * 160 pixels, so filling in zeros for final 200-160=40 rows?
   blk.b 320/8*3*(200-160),0
   ; datalists aligned to 32-bit
   CNOP 0,4
