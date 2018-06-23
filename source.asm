@@ -84,15 +84,16 @@ init:
   move.l $4,a6
   jsr -132(a6)  ; Forbid
 
-  ; setup displayhardware to show a 320x200px 3 bitplanes playfield
+  ; setup displayhardware to show a 640x200px 3 bitplanes playfield
   ; with zero horizontal scroll and zero modulos
   move.w #$3200,BPLCON0      ; three bitplanes
   move.w #$0000,BPLCON1      ; horizontal scroll 0
-  move.w #$0050,BPL1MOD      ; odd modulo
-  move.w #$0050,BPL2MOD      ; even modulo
+  ; given that the 3 color channels are on one row
+  ; bplmod = (width of the playfield * (num bitplanes) - width screen) / 8
+  move.w #$00c8,BPL1MOD      ; odd modulo
+  move.w #$00c8,BPL2MOD      ; even modulo
   move.w #$2c81,DIWSTRT      ; DIWSTRT - topleft corner (2c81)
   move.w #$c8d1,DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
-  ;move.w #$c8f1,DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
   move.w #$0038,DDFSTRT      ; DDFSTRT
   move.w #$00d0,DDFSTOP      ; DDFSTOP
   move.w #%1000000110100000,DMACON  ; DMA set ON
@@ -144,7 +145,7 @@ mainloop:
   move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
 
   ; bitplane 1
-  move.l #bitplanes+40,d0
+  move.l #bitplanes+80,d0
   add.l d1,d0
   move.w #$00e6,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e6 BPL2PTL  Bitplane pointer 2 (low 15 bits)
@@ -153,7 +154,7 @@ mainloop:
   move.w d0,(a6)+    ; go into $dff0e4 BPL2PTH  Bitplane pointer 2 (high 5 bits)
 
   ; bitplane 2
-  move.l #bitplanes+80,d0
+  move.l #bitplanes+160,d0
   add.l d1,d0
   move.w #$00ea,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0ea BPL3PTL  Bitplane pointer 3 (low 15 bits) 
@@ -164,12 +165,12 @@ mainloop:
   ; colors, last 3 characters/12 bits are rgb
   ; TODO(lucasw) replace with inc() command to get externally generated palette
   move.l #$01800000,(a6)+  ; color 0
-  move.l #$01820666,(a6)+  ; color 1
-  move.l #$01840890,(a6)+  ; color 2
-  move.l #$01860450,(a6)+  ; color 3
-  move.l #$01880e03,(a6)+  ; color 4
-  move.l #$018a0ed0,(a6)+  ; color 5
-  move.l #$018c0e60,(a6)+  ; color 6
+  move.l #$01820fff,(a6)+  ; color 1
+  move.l #$01840569,(a6)+  ; color 2
+  move.l #$01860cc3,(a6)+  ; color 3
+  move.l #$01880235,(a6)+  ; color 4
+  move.l #$018a0545,(a6)+  ; color 5
+  move.l #$018c0a46,(a6)+  ; color 6
   move.l #$018e0e60,(a6)+  ; color 7
   move.l #$01900e60,(a6)+  ; color 8
   move.l #$01920e60,(a6)+  ; color 9
@@ -431,8 +432,8 @@ fireball_data:
   CNOP 4,4             ; End of sprite data
 bitplanes:
   incbin "gimp/indexed_color_amiga.data.raw"
-  ; is the image 320 * 160 pixels, so filling in zeros for final 200-160=40 rows?
-  blk.b 320/8*3*(200-160),0
+  ; is the image 640 * 160 pixels, so filling in zeros for final 200-160=40 rows?
+  blk.b 640/8*3*(200-160),0
   ; datalists aligned to 32-bit
   CNOP 0,4
 copper:
