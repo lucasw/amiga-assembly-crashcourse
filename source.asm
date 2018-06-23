@@ -92,6 +92,7 @@ init:
   move.w #$0050,BPL2MOD      ; even modulo
   move.w #$2c81,DIWSTRT      ; DIWSTRT - topleft corner (2c81)
   move.w #$c8d1,DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
+  ;move.w #$c8f1,DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
   move.w #$0038,DDFSTRT      ; DDFSTRT
   move.w #$00d0,DDFSTOP      ; DDFSTOP
   move.w #%1000000110100000,DMACON  ; DMA set ON
@@ -127,8 +128,13 @@ mainloop:
   ; write instructions into copperlist
   ; TODO(lucasw) couldn't this be done once if they aren't changing?
 
+  ; this scrolls vertically, but doesn't wrap
+  ;mulu.w 120,d1
+
   ; bitplane 0
   move.l #bitplanes,d0
+  ; this scrolls but the when the loop happens the colors will have shifted
+  add.w d1,d0
   move.w #$00e2,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
   swap d0
@@ -137,6 +143,7 @@ mainloop:
 
   ; bitplane 1
   move.l #bitplanes+40,d0
+  add.l d1,d0
   move.w #$00e6,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e6 BPL2PTL  Bitplane pointer 2 (low 15 bits)
   swap d0
@@ -145,6 +152,7 @@ mainloop:
 
   ; bitplane 2
   move.l #bitplanes+80,d0
+  add.l d1,d0
   move.w #$00ea,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0ea BPL3PTL  Bitplane pointer 3 (low 15 bits) 
   swap d0
@@ -187,6 +195,7 @@ mainloop:
   ; TODO(lucasw) unless wanting to cycle colors, could store the address
   ; at end of static copper list and then use it below for dynamic copper list stuff?
 
+  bra skip
   move.l #32,d0 ; Number of iterations
   move.l #$07,d1 ; Current row wait
   move.l #sin32_15,a0 ; Sine base
@@ -213,6 +222,18 @@ mainloop:
     subq.w #1,d0
     bne scrollrows
 
+  move.l #32,d0
+  move.l #$07,d1 ; Current row wait
+  move_planes:
+    move.w d1,(a6)+
+    move.w #$fffe,(a6)+
+    add.l #$500,d1
+
+    move.w #$0102,(a6)+
+    add.w #-1,(a6)+
+    dbra d0,move_planes
+  skip:
+
   ; end of copperlist
   move.l #$fffffffe,(a6)+
 
@@ -225,6 +246,16 @@ mainloop:
   move.l #DUMMY_DST,SPR5PTH     ; Sprite 5 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR7PTH     ; Sprite 7 pointer = $25000 actually used sprite
+
+  move.b BPLCON1,d0
+  ; andi.b #$f0,d0
+  addi.b #1,d0
+  andi.b #$0f,d0
+  move.b d0,d1
+  lsl.b #4,d1
+  add.b d1,d0
+  andi.b #$00,BPLCON1
+  or.b d0,BPLCON1
 
   ; detect key press, use special keys for now
   ;cmp.b #$37,SKEYS  ; shift left
@@ -388,6 +419,9 @@ gfxname:
   dc.b 'graphics.library',0
   Section ChipRAM,Data_c
   CNOP 0,4
+
+; TODO(lucasw) is this actually chip ram, and it should go somewhere else and only
+; be copied to chip ram as needed?
 
 ; no bitplanes for sprites, just the raw data of indices to the palette
 ; adapted from http://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node02D2.html
