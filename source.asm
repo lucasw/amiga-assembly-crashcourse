@@ -128,13 +128,15 @@ mainloop:
   ; write instructions into copperlist
   ; TODO(lucasw) couldn't this be done once if they aren't changing?
 
-  ; this scrolls vertically, but doesn't wrap
+  ; this scrolls vertically, but doesn't wrap(?)
   ;mulu.w 120,d1
+  ; scroll slowly
+  lsr #3,d1
 
   ; bitplane 0
   move.l #bitplanes,d0
   ; this scrolls but the when the loop happens the colors will have shifted
-  add.w d1,d0
+  add.w d1,d0  ; scroll very quickly- 8 pixels per increment
   move.w #$00e2,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
   swap d0
@@ -195,7 +197,7 @@ mainloop:
   ; TODO(lucasw) unless wanting to cycle colors, could store the address
   ; at end of static copper list and then use it below for dynamic copper list stuff?
 
-  bra skip
+  bra skip3
   move.l #32,d0 ; Number of iterations
   move.l #$07,d1 ; Current row wait
   move.l #sin32_15,a0 ; Sine base
@@ -212,7 +214,7 @@ mainloop:
     move.l d4,d5
     lsl.l #4,d4
     add.l d4,d5
-    ; Add horizontal offset to copperlist
+    ; Add horizontal offset to copperlist - BPLCON1
     move.w #$0102,(a6)+
     move.w d5,(a6)+
     ; Proceed to next row that we want to offset
@@ -221,18 +223,20 @@ mainloop:
     addq.w #1,d2
     subq.w #1,d0
     bne scrollrows
+  skip3:
 
-  move.l #32,d0
-  move.l #$07,d1 ; Current row wait
-  move_planes:
-    move.w d1,(a6)+
-    move.w #$fffe,(a6)+
-    add.l #$500,d1
-
-    move.w #$0102,(a6)+
-    add.w #-1,(a6)+
-    dbra d0,move_planes
-  skip:
+  ; scroll every row the same
+  move.w #$0102,(a6)+  ; BPLCON1
+  move.l frame,d2
+  ; lsr #2,d2  ; slow down the scrolling
+  and.w #$000f,d2
+  move.w #$f,d3
+  sub.w d2,d3
+  ; duplicate the 4bit horiz scroll value for both playfields (we are in single pf mode)
+  move.w d3,d2
+  lsl.w #4,d2
+  add.w d2,d3
+  move.w d3,(a6)+
 
   ; end of copperlist
   move.l #$fffffffe,(a6)+
@@ -246,16 +250,6 @@ mainloop:
   move.l #DUMMY_DST,SPR5PTH     ; Sprite 5 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR7PTH     ; Sprite 7 pointer = $25000 actually used sprite
-
-  move.b BPLCON1,d0
-  ; andi.b #$f0,d0
-  addi.b #1,d0
-  andi.b #$0f,d0
-  move.b d0,d1
-  lsl.b #4,d1
-  add.b d1,d0
-  andi.b #$00,BPLCON1
-  or.b d0,BPLCON1
 
   ; detect key press, use special keys for now
   ;cmp.b #$37,SKEYS  ; shift left
