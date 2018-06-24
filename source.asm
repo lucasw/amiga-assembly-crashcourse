@@ -127,22 +127,28 @@ init:
   ; the dummy sprite
   move.l #$00000000,DUMMY_DST
 
-mainloop:
+main_loop:
+  ; increment frame count
   move.l frame,d1
-  move.l #copper,a6
   addq.l #1,d1
   move.l d1,frame
 
   ; write instructions into copperlist
   ; TODO(lucasw) couldn't this be done once if they aren't changing?
 
+
+  ; start setting up copper list
+  move.l #copper_list,a6
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ; sky bitplanes
+
   ; this scrolls vertically, but doesn't wrap(?)
+  move.l frame,d1
   ;mulu.w 120,d1
   ; scroll slowly
-  lsr #3,d1
-
+  lsr #4,d1
   ; bitplane 0
-  move.l #bitplanes,d0
+  move.l #sky,d0
   ; this scrolls but the when the loop happens the colors will have shifted
   add.w d1,d0  ; scroll very quickly- 8 pixels per increment
   move.w #$00e2,(a6)+  ; LO-bits of start of bitplane
@@ -151,9 +157,9 @@ mainloop:
   move.w #$00e0,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
 
-  ; bitplane 1
-  ; move.l #bitplanes+80,d0
-  move.l #bitplanes+16000,d0
+  ; bitplane 3
+  ; move.l #sky+80,d0
+  move.l #sky+16000,d0
   add.l d1,d0
   move.w #$00ea,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e6 BPL3PTL  Bitplane pointer 2 (low 15 bits)
@@ -161,15 +167,47 @@ mainloop:
   move.w #$00e8,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e4 BPL3PTH  Bitplane pointer 2 (high 5 bits)
 
-  ; bitplane 2
-  ; move.l #bitplanes+160,d0
-  move.l #bitplanes+32000,d0
+  ; bitplane 5
+  ; move.l #sky+160,d0
+  move.l #sky+32000,d0
   add.l d1,d0
   move.w #$00f2,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0ea BPL5PTL  Bitplane pointer 3 (low 15 bits)
   swap d0
   move.w #$00f0,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e8 BPL5PTH Bitplane pointer 3 (high 5 bits)
+
+  ; mountains bitplanes
+  move.l frame,d1
+  lsr #3,d1
+  move.l #mountains,d0
+  ; this scrolls but the when the loop happens the colors will have shifted
+  add.w d1,d0  ; scroll very quickly- 8 pixels per increment
+  move.w #$00e6,(a6)+  ; LO-bits of start of bitplane
+  move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
+  swap d0
+  move.w #$00e4,(a6)+  ; HI-bits of start of bitplane
+  move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
+
+  move.l #mountains,d0
+  ; this scrolls but the when the loop happens the colors will have shifted
+  add.w d1,d0  ; scroll very quickly- 8 pixels per increment
+  move.w #$00ee,(a6)+  ; LO-bits of start of bitplane
+  move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
+  swap d0
+  move.w #$00ec,(a6)+  ; HI-bits of start of bitplane
+  move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
+
+  move.l #mountains,d0
+  ; this scrolls but the when the loop happens the colors will have shifted
+  add.w d1,d0  ; scroll very quickly- 8 pixels per increment
+  move.w #$00f6,(a6)+  ; LO-bits of start of bitplane
+  move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
+  swap d0
+  move.w #$00f4,(a6)+  ; HI-bits of start of bitplane
+  move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   ; colors, last 3 characters/12 bits are rgb
   ; TODO(lucasw) replace with inc() command to get externally generated palett
@@ -184,13 +222,13 @@ mainloop:
   move.l #$018e0e60,(a6)+  ; color 7
   ; playfield 2
   move.l #$01900000,(a6)+  ; color 8
-  move.l #$01920000,(a6)+  ; color 9
-  move.l #$01940000,(a6)+  ; color 10
-  move.l #$01960000,(a6)+  ; color 11
-  move.l #$01980000,(a6)+  ; color 12
-  move.l #$019a0000,(a6)+  ; color 13
-  move.l #$019c0000,(a6)+  ; color 14
-  move.l #$019e0000,(a6)+  ; color 15
+  move.l #$01920235,(a6)+  ; color 9
+  move.l #$01940e01,(a6)+  ; color 10
+  move.l #$01960545,(a6)+  ; color 11
+  move.l #$01980a36,(a6)+  ; color 12
+  move.l #$019a0569,(a6)+  ; color 13
+  move.l #$019c0b83,(a6)+  ; color 14
+  move.l #$019e0fff,(a6)+  ; color 15
   ; sprite 0,1 - the ship
   move.l #$01a00000,(a6)+  ; color 16
   move.l #$01a20000,(a6)+  ; color 17
@@ -240,14 +278,20 @@ mainloop:
   ; scroll every row the same
   move.w #$0102,(a6)+  ; BPLCON1
   move.l frame,d2
-  ; lsr #2,d2  ; slow down the scrolling
+  lsr #1,d2  ; slow down the scrolling
   and.w #$000f,d2
   move.w #$f,d3
+  ; reverse direction because scrolling right
   sub.w d2,d3
-  ; duplicate the 4bit horiz scroll value for both playfields (we are in single pf mode)
-  move.w d3,d2
-  lsl.w #4,d2
-  add.w d2,d3
+  ; scroll playfield2 faster 
+  move.l frame,d2
+  and.w #$000f,d2
+  move.w #$f,d4
+  ; reverse direction because scrolling right
+  sub.w d2,d4
+  ; combine the two scroll values
+  lsl.w #4,d4
+  add.w d4,d3
   move.w d3,(a6)+
 
   ; end of copperlist
@@ -369,9 +413,9 @@ waitVB:
   bne waitVB
 
   ; Take copper list into use
-  move.l #copper,a6
+  move.l #copper_list,a6
   move.l a6,COP1LCH
-  bra mainloop
+  bra main_loop
 
 exit:
 ; exit gracefully - reverse everything done in init
@@ -441,11 +485,16 @@ fireball_data:
   dc.w    $00ff,$1000             ;VSTART, HSTART, VSTOP
   incbin "gimp/fireball.data.raw"
   CNOP 4,4             ; End of sprite data
-bitplanes:
-  incbin "gimp/indexed_color_amiga.data.raw"
+sky:
+  incbin "gimp/sky.data.raw"
   ; datalists aligned to 32-bit
   CNOP 0,4
-copper:
+mountains:
+  incbin "gimp/mountains.data.raw"
+  ; datalists aligned to 32-bit
+  CNOP 0,4
+
+copper_list:
   dc.l $ffffffe ; end of copper list
   blk.l 1023,0
 
