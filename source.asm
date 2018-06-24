@@ -12,6 +12,7 @@ INTREQ    EQU    $dff09c
 
 BPLCON0    EQU             $dff100
 BPLCON1    EQU             $dff102
+BPLCON2    EQU             $dff104
 BPL1MOD    EQU             $dff108
 BPL2MOD    EQU             $dff10a
 DIWSTRT    EQU             $dff08e
@@ -86,8 +87,10 @@ init:
 
   ; setup displayhardware to show a 640x200px 3 bitplanes playfield
   ; with zero horizontal scroll and zero modulos
-  move.w #$3200,BPLCON0      ; three bitplanes
+  ; move.w #$3200,BPLCON0      ; three bitplanes, single playfield
+  move.w #$6600,BPLCON0      ; three bitplanes, dual playfield
   move.w #$0000,BPLCON1      ; horizontal scroll 0
+  ; move.w #$0004,BPLCON2      ; priority
   ; horizontal arrangement- given that the 3 color channels are on one row
   ; bplmod = (width of the playfield * (num bitplanes) - width screen) / 8
   ; move.w #$00c8,BPL1MOD      ; odd modulo
@@ -152,24 +155,25 @@ mainloop:
   ; move.l #bitplanes+80,d0
   move.l #bitplanes+16000,d0
   add.l d1,d0
-  move.w #$00e6,(a6)+  ; LO-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e6 BPL2PTL  Bitplane pointer 2 (low 15 bits)
+  move.w #$00ea,(a6)+  ; LO-bits of start of bitplane
+  move.w d0,(a6)+    ; go into $dff0e6 BPL3PTL  Bitplane pointer 2 (low 15 bits)
   swap d0
-  move.w #$00e4,(a6)+  ; HI-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e4 BPL2PTH  Bitplane pointer 2 (high 5 bits)
+  move.w #$00e8,(a6)+  ; HI-bits of start of bitplane
+  move.w d0,(a6)+    ; go into $dff0e4 BPL3PTH  Bitplane pointer 2 (high 5 bits)
 
   ; bitplane 2
   ; move.l #bitplanes+160,d0
   move.l #bitplanes+32000,d0
   add.l d1,d0
-  move.w #$00ea,(a6)+  ; LO-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0ea BPL3PTL  Bitplane pointer 3 (low 15 bits) 
+  move.w #$00f2,(a6)+  ; LO-bits of start of bitplane
+  move.w d0,(a6)+    ; go into $dff0ea BPL5PTL  Bitplane pointer 3 (low 15 bits)
   swap d0
-  move.w #$00e8,(a6)+  ; HI-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e8 BPL3PTH Bitplane pointer 3 (high 5 bits)
+  move.w #$00f0,(a6)+  ; HI-bits of start of bitplane
+  move.w d0,(a6)+    ; go into $dff0e8 BPL5PTH Bitplane pointer 3 (high 5 bits)
 
   ; colors, last 3 characters/12 bits are rgb
-  ; TODO(lucasw) replace with inc() command to get externally generated palette
+  ; TODO(lucasw) replace with inc() command to get externally generated palett
+  ; playfield 1
   move.l #$01800000,(a6)+  ; color 0
   move.l #$01820fff,(a6)+  ; color 1
   move.l #$01840569,(a6)+  ; color 2
@@ -178,14 +182,15 @@ mainloop:
   move.l #$018a0545,(a6)+  ; color 5
   move.l #$018c0a46,(a6)+  ; color 6
   move.l #$018e0e60,(a6)+  ; color 7
-  move.l #$01900e60,(a6)+  ; color 8
-  move.l #$01920e60,(a6)+  ; color 9
-  move.l #$01940e60,(a6)+  ; color 10
-  move.l #$01960e60,(a6)+  ; color 11
-  move.l #$01980e60,(a6)+  ; color 12
-  move.l #$019a0e60,(a6)+  ; color 13
-  move.l #$019c0e60,(a6)+  ; color 14
-  move.l #$019e0e60,(a6)+  ; color 15
+  ; playfield 2
+  move.l #$01900000,(a6)+  ; color 8
+  move.l #$01920000,(a6)+  ; color 9
+  move.l #$01940000,(a6)+  ; color 10
+  move.l #$01960000,(a6)+  ; color 11
+  move.l #$01980000,(a6)+  ; color 12
+  move.l #$019a0000,(a6)+  ; color 13
+  move.l #$019c0000,(a6)+  ; color 14
+  move.l #$019e0000,(a6)+  ; color 15
   ; sprite 0,1 - the ship
   move.l #$01a00000,(a6)+  ; color 16
   move.l #$01a20000,(a6)+  ; color 17
