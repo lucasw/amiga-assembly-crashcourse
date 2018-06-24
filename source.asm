@@ -22,6 +22,24 @@ DDFSTOP    EQU             $dff094
 VPOSR      EQU             $dff004
 COP1LCH    EQU             $dff080
 
+; the 000 is dropped for use in the copper
+BPL1PTH EQU $0e0 ; Bit plane 1 pointer (high 5 bits)
+BPL1PTL EQU $0e2 ; Bit plane 1 pointer (low 15 bits)
+BPL2PTH EQU $0e4 ; Bit plane 2 pointer (high 5 bits)
+BPL2PTL EQU $0e6 ; Bit plane 2 pointer (low 15 bits)
+BPL3PTH EQU $0e8 ; Bit plane 3 pointer (high 5 bits)
+BPL3PTL EQU $0ea ; Bit plane 3 pointer (low 15 bits)
+BPL4PTH EQU $0ec ; Bit plane 4 pointer (high 5 bits)
+BPL4PTL EQU $0ee ; Bit plane 4 pointer (low 15 bits)
+BPL5PTH EQU $0f0 ; Bit plane 5 pointer (high 5 bits)
+BPL5PTL EQU $0f2 ; Bit plane 5 pointer (low 15 bits)
+BPL6PTH EQU $0f4 ; Bit plane 6 pointer (high 5 bits)
+BPL6PTL EQU $0f6 ; Bit plane 6 pointer (low 15 bits)
+BPL7PTH EQU $0f8 ; Bit plane 7 pointer (high 5 bits)
+BPL7PTL EQU $0fa ; Bit plane 7 pointer (low 15 bits)
+BPL8PTH EQU $0fc ; Bit plane 8 pointer (high 5 bits)
+BPL8PTL EQU $0fe ; Bit plane 8 pointer (low 15 bits)
+
 CIAAPRA    EQU             $bfe001
 
 CIAASDR    EQU             $bfec01
@@ -151,30 +169,30 @@ main_loop:
   move.l #sky,d0
   ; this scrolls but the when the loop happens the colors will have shifted
   add.w d1,d0  ; scroll very quickly- 8 pixels per increment
-  move.w #$00e2,(a6)+  ; LO-bits of start of bitplane
+  move.w #BPL1PTL,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
   swap d0
-  move.w #$00e0,(a6)+  ; HI-bits of start of bitplane
+  move.w #BPL1PTH,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
 
   ; bitplane 3
   ; move.l #sky+80,d0
   move.l #sky+16000,d0
   add.l d1,d0
-  move.w #$00ea,(a6)+  ; LO-bits of start of bitplane
+  move.w #BPL3PTL,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e6 BPL3PTL  Bitplane pointer 2 (low 15 bits)
   swap d0
-  move.w #$00e8,(a6)+  ; HI-bits of start of bitplane
+  move.w #BPL3PTH,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e4 BPL3PTH  Bitplane pointer 2 (high 5 bits)
 
   ; bitplane 5
   ; move.l #sky+160,d0
   move.l #sky+32000,d0
   add.l d1,d0
-  move.w #$00f2,(a6)+  ; LO-bits of start of bitplane
+  move.w #BPL5PTL,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0ea BPL5PTL  Bitplane pointer 3 (low 15 bits)
   swap d0
-  move.w #$00f0,(a6)+  ; HI-bits of start of bitplane
+  move.w #BPL5PTH,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e8 BPL5PTH Bitplane pointer 3 (high 5 bits)
 
   ; mountains bitplanes
@@ -183,28 +201,28 @@ main_loop:
   move.l #mountains,d0
   ; this scrolls but the when the loop happens the colors will have shifted
   add.w d1,d0  ; scroll very quickly- 8 pixels per increment
-  move.w #$00e6,(a6)+  ; LO-bits of start of bitplane
+  move.w #BPL2PTL,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
   swap d0
-  move.w #$00e4,(a6)+  ; HI-bits of start of bitplane
+  move.w #BPL2PTH,(a6)+  ; HI-bits of start of bitplane
+  move.w d0,(a6)+
+
+  move.l #mountains,d0
+  ; this scrolls but the when the loop happens the colors will have shifted
+  add.w d1,d0  ; scroll very quickly- 8 pixels per increment
+  move.w #BPL4PTL,(a6)+  ; LO-bits of start of bitplane
+  move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
+  swap d0
+  move.w #BPL4PTH,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
 
   move.l #mountains,d0
   ; this scrolls but the when the loop happens the colors will have shifted
   add.w d1,d0  ; scroll very quickly- 8 pixels per increment
-  move.w #$00ee,(a6)+  ; LO-bits of start of bitplane
+  move.w #BPL6PTL,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
   swap d0
-  move.w #$00ec,(a6)+  ; HI-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
-
-  move.l #mountains,d0
-  ; this scrolls but the when the loop happens the colors will have shifted
-  add.w d1,d0  ; scroll very quickly- 8 pixels per increment
-  move.w #$00f6,(a6)+  ; LO-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
-  swap d0
-  move.w #$00f4,(a6)+  ; HI-bits of start of bitplane
+  move.w #BPL6PTH,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
