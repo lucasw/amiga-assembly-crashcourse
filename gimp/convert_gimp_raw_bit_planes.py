@@ -10,7 +10,7 @@
 format = '''
 
 convert a 4 color sprite:
-./convert_gimp_raw_bit_planes.py image.data 16 2
+./convert_gimp_raw_bit_planes.py image.data 16 2 h
 
          bit plane 0  | bit plane 1  | bit plane 2
 row 0    8pixels/byte
@@ -26,41 +26,98 @@ first 320/8 = 40 bytes of bp 0, then 40 of 1, then 40 of bit plane 2
 
 import sys
 
-data = sys.argv[1]
-print "input file: ", data
+if len(sys.argv) < 5:
+    print './convert_gimp_raw_bit_planes.py image.data width num_bit_planes h-or-v'
+    sys.exit(0)
+data_file = sys.argv[1]
+print "input file: ", data_file
 width = int(sys.argv[2])  # 320
 print "width", width
-bitplanes = int(sys.argv[3])
-print "bit planes", bitplanes
-pixels_per_byte = 8  # 1 << bitplanes
+num_bit_planes = int(sys.argv[3])
+print "bit planes", num_bit_planes
+pixels_per_byte = 8  # 1 << num_bit_planes
 # print "pixels per byte: ", pixels_per_byte
 
-# Make a 'flag' with two color squares on top,
-# and a solid rectangle on the bottom
-with open(data, 'rb') as src, open(data + '.raw', 'wb') as f:
-    row = []
-    num_bytes = 0
+horizontal_mode = sys.argv[4] == 'h'
+
+data = []
+with open(data_file, 'rb') as src:
     for src_byte in src.read():
-        row.append(ord(src_byte))
-        if len(row) == width:
-            for bp in range(bitplanes):
-                for xb in range(width / pixels_per_byte):
-                    img_byte = 0
-                    plane_mask = (1 << bp)
-                    for b in range(pixels_per_byte):
-                        ind = xb * pixels_per_byte + b
-                        srcb = row[ind]
-                        masked_src = ((srcb & plane_mask) >> bp)
-                        # print ind, srcb, masked_src  # , type(srcb)
-                        img_byte += masked_src << (pixels_per_byte - b - 1)
-                    # print xb, hex(img_byte), plane_mask
+        data.append(ord(src_byte))
+
+if len(data) < width:
+    print "not enough data ", len(data)
+    sys.exit(1)
+
+print "num_bytes: ", len(data), "rows: ", len(data) / width
+# Every bytes in the gimp indexed image is one byte regardless of how few
+# colors there are, it doesn't try to pack them tighter.
+# The next steps is to separate each byte into bit planes and then arrange
+# the bit planes in either of two ways:
+#  A single row contains all the bit planes of that row in sequence
+# or a single 'column' contains all the bit planes in sequence
+# (which actually means in linear order the entire bit plane of each image
+# in sequence)
+
+bit_planes = []
+
+for bp_ind in range(num_bit_planes):
+    bit_planes.append([])
+    bit_mask = 1 << bp_ind
+    for ind in range(len(data)):
+        val = (data[ind] & bit_mask) >> bp_ind
+        bit_planes[bp_ind].append(val)
+
+# pack each set of 8 bits into bytes 
+packed_bit_planes = []
+bpb = 8
+packed_width = width / bpb
+for bp_ind in range(len(bit_planes)):
+    packed_bit_planes.append([])
+    for out_ind in range(len(bit_planes[bp_ind]) / bpb):
+        new_byte = 0
+        for bit_ind in range(bpb):
+            src_ind = out_ind * bpb + bit_ind
+            # reverse the bit order
+            shift = (bpb - bit_ind - 1)
+            new_byte |= bit_planes[bp_ind][src_ind] << shift
+        packed_bit_planes[bp_ind].append(new_byte)
+
+if len(packed_bit_planes) <= 0:
+    print "no packed bit planes"
+    sys.exit(1)
+
+# arrange the bit planes in the desired order in the output file
+with open(data_file + '.raw', 'wb') as f:
+    num_bytes = 0
+
+    if horizontal_mode:
+        print 'horizontal mode, bplmod =', hex(packed_width)
+        for y in range(len(packed_bit_planes[0]) / packed_width):
+            for bp_ind in range(len(packed_bit_planes)):
+                for x in range(packed_width):
+                    ind = y * packed_width + x
+                    img_byte = packed_bit_planes[bp_ind][ind]
                     f.write(chr(img_byte))
                     num_bytes += 1
-            row = []
+    else:
+        print 'vertical mode, bplmod = 0'
+        for bp_ind in range(len(packed_bit_planes)):
+            # don't need x and y, could just loop through data, but here for
+            # symmetry with above
+            for y in range(len(packed_bit_planes[0]) / packed_width):
+                for x in range(packed_width):
+                    ind = y * packed_width + x
+                    img_byte = packed_bit_planes[bp_ind][ind]
+                    f.write(chr(img_byte))
+                    num_bytes += 1
+
     print 'num_bytes ', num_bytes
 
-with open(data + ".pal", 'rb') as src, open(data + '_color.asm', 'w') as f:
+# finally write the palette
+with open(data_file + ".pal", 'rb') as src, open(data_file + '_color.asm', 'w') as f:
     col = []
+    # TODO(lucasw) need color offset, may not be using color 0 to start
     addr = int("01800000", 16)
     color_ind = 0
     for src_byte in src.read():
