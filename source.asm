@@ -88,15 +88,16 @@ init:
   ; with zero horizontal scroll and zero modulos
   move.w #$3200,BPLCON0      ; three bitplanes
   move.w #$0000,BPLCON1      ; horizontal scroll 0
-  ; given that the 3 color channels are on one row
+  ; horizontal arrangement- given that the 3 color channels are on one row
   ; bplmod = (width of the playfield * (num bitplanes) - width screen) / 8
   ; move.w #$00c8,BPL1MOD      ; odd modulo
   ; move.w #$00c8,BPL2MOD      ; even modulo
   ; vertical arrangement
+  ; bplmod = (width of the playfield - width screen) / 8
   move.w #$0028,BPL1MOD      ; odd modulo
   move.w #$0028,BPL2MOD      ; even modulo
-  move.w #$2c81,DIWSTRT      ; DIWSTRT - topleft corner (2c81)
-  move.w #$c8d1,DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
+  move.w #$2c91,DIWSTRT      ; DIWSTRT - topleft corner (2c81)
+  move.w #$c8c1,DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
   move.w #$0038,DDFSTRT      ; DDFSTRT
   move.w #$00d0,DDFSTOP      ; DDFSTOP
   move.w #%1000000110100000,DMACON  ; DMA set ON
