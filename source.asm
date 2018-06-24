@@ -90,8 +90,11 @@ init:
   move.w #$0000,BPLCON1      ; horizontal scroll 0
   ; given that the 3 color channels are on one row
   ; bplmod = (width of the playfield * (num bitplanes) - width screen) / 8
-  move.w #$00c8,BPL1MOD      ; odd modulo
-  move.w #$00c8,BPL2MOD      ; even modulo
+  ; move.w #$00c8,BPL1MOD      ; odd modulo
+  ; move.w #$00c8,BPL2MOD      ; even modulo
+  ; vertical arrangement
+  move.w #$0028,BPL1MOD      ; odd modulo
+  move.w #$0028,BPL2MOD      ; even modulo
   move.w #$2c81,DIWSTRT      ; DIWSTRT - topleft corner (2c81)
   move.w #$c8d1,DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
   move.w #$0038,DDFSTRT      ; DDFSTRT
@@ -145,7 +148,8 @@ mainloop:
   move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
 
   ; bitplane 1
-  move.l #bitplanes+80,d0
+  ; move.l #bitplanes+80,d0
+  move.l #bitplanes+12800,d0
   add.l d1,d0
   move.w #$00e6,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e6 BPL2PTL  Bitplane pointer 2 (low 15 bits)
@@ -154,7 +158,8 @@ mainloop:
   move.w d0,(a6)+    ; go into $dff0e4 BPL2PTH  Bitplane pointer 2 (high 5 bits)
 
   ; bitplane 2
-  move.l #bitplanes+160,d0
+  ; move.l #bitplanes+160,d0
+  move.l #bitplanes+25600,d0
   add.l d1,d0
   move.w #$00ea,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0ea BPL3PTL  Bitplane pointer 3 (low 15 bits) 

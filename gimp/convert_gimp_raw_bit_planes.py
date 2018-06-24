@@ -72,6 +72,7 @@ for bp_ind in range(num_bit_planes):
 packed_bit_planes = []
 bpb = 8
 packed_width = width / bpb
+print 'packed width', packed_width
 for bp_ind in range(len(bit_planes)):
     packed_bit_planes.append([])
     for out_ind in range(len(bit_planes[bp_ind]) / bpb):
@@ -92,7 +93,7 @@ with open(data_file + '.raw', 'wb') as f:
     num_bytes = 0
 
     if horizontal_mode:
-        print 'horizontal mode, bplmod =', hex(packed_width)
+        print 'horizontal mode'
         for y in range(len(packed_bit_planes[0]) / packed_width):
             for bp_ind in range(len(packed_bit_planes)):
                 for x in range(packed_width):
@@ -101,7 +102,7 @@ with open(data_file + '.raw', 'wb') as f:
                     f.write(chr(img_byte))
                     num_bytes += 1
     else:
-        print 'vertical mode, bplmod = 0'
+        print 'vertical mode'
         for bp_ind in range(len(packed_bit_planes)):
             # don't need x and y, could just loop through data, but here for
             # symmetry with above
