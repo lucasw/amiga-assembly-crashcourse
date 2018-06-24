@@ -97,7 +97,7 @@ init:
   move.w #$0028,BPL1MOD      ; odd modulo
   move.w #$0028,BPL2MOD      ; even modulo
   move.w #$2c91,DIWSTRT      ; DIWSTRT - topleft corner (2c81)
-  move.w #$c8c1,DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
+  move.w #$f8c1,DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
   move.w #$0038,DDFSTRT      ; DDFSTRT
   move.w #$00d0,DDFSTOP      ; DDFSTOP
   move.w #%1000000110100000,DMACON  ; DMA set ON
@@ -150,7 +150,7 @@ mainloop:
 
   ; bitplane 1
   ; move.l #bitplanes+80,d0
-  move.l #bitplanes+12800,d0
+  move.l #bitplanes+16000,d0
   add.l d1,d0
   move.w #$00e6,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e6 BPL2PTL  Bitplane pointer 2 (low 15 bits)
@@ -160,7 +160,7 @@ mainloop:
 
   ; bitplane 2
   ; move.l #bitplanes+160,d0
-  move.l #bitplanes+25600,d0
+  move.l #bitplanes+32000,d0
   add.l d1,d0
   move.w #$00ea,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0ea BPL3PTL  Bitplane pointer 3 (low 15 bits) 
@@ -438,8 +438,6 @@ fireball_data:
   CNOP 4,4             ; End of sprite data
 bitplanes:
   incbin "gimp/indexed_color_amiga.data.raw"
-  ; is the image 640 * 160 pixels, so filling in zeros for final 200-160=40 rows?
-  blk.b 640/8*3*(200-160),0
   ; datalists aligned to 32-bit
   CNOP 0,4
 copper:
