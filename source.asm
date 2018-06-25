@@ -158,71 +158,71 @@ main_loop:
   ; start setting up copper list
   move.l #copper_list,a6
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ; sky bitplanes
+  ; mountains bitplanes
 
-  ; this scrolls vertically, but doesn't wrap(?)
   move.l frame,d1
-  ;mulu.w 120,d1
   ; scroll slowly
-  lsr #4,d1
+  lsr #7,d1
+  ;mulu.w 120,d1
   ; bitplane 0
   move.l #sky,d0
   ; this scrolls but the when the loop happens the colors will have shifted
-  add.w d1,d0  ; scroll very quickly- 8 pixels per increment
-  move.w #BPL1PTL,(a6)+  ; LO-bits of start of bitplane
+  add.w d1,d0  ; scroll 8 pixels per increment
+  move.w #BPL2PTL,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
   swap d0
-  move.w #BPL1PTH,(a6)+  ; HI-bits of start of bitplane
+  move.w #BPL2PTH,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
 
   ; bitplane 3
   ; move.l #sky+80,d0
   move.l #sky+16000,d0
   add.l d1,d0
-  move.w #BPL3PTL,(a6)+  ; LO-bits of start of bitplane
+  move.w #BPL4PTL,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e6 BPL3PTL  Bitplane pointer 2 (low 15 bits)
   swap d0
-  move.w #BPL3PTH,(a6)+  ; HI-bits of start of bitplane
+  move.w #BPL4PTH,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e4 BPL3PTH  Bitplane pointer 2 (high 5 bits)
 
   ; bitplane 5
   ; move.l #sky+160,d0
   move.l #sky+32000,d0
   add.l d1,d0
-  move.w #BPL5PTL,(a6)+  ; LO-bits of start of bitplane
+  move.w #BPL6PTL,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0ea BPL5PTL  Bitplane pointer 3 (low 15 bits)
   swap d0
-  move.w #BPL5PTH,(a6)+  ; HI-bits of start of bitplane
+  move.w #BPL6PTH,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e8 BPL5PTH Bitplane pointer 3 (high 5 bits)
 
+  ;;;;;;;;;;;;;;;;;;;;;;
   ; mountains bitplanes
   move.l frame,d1
-  lsr #3,d1
+  lsr #4,d1
   move.l #mountains,d0
   ; this scrolls but the when the loop happens the colors will have shifted
-  add.w d1,d0  ; scroll very quickly- 8 pixels per increment
-  move.w #BPL2PTL,(a6)+  ; LO-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
+  add.w d1,d0  ; scroll 8 pixels when this increments
+  move.w #BPL1PTL,(a6)+
+  move.w d0,(a6)+
   swap d0
-  move.w #BPL2PTH,(a6)+  ; HI-bits of start of bitplane
+  move.w #BPL1PTH,(a6)+
   move.w d0,(a6)+
 
-  move.l #mountains,d0
+  move.l #mountains+16000,d0
   ; this scrolls but the when the loop happens the colors will have shifted
-  add.w d1,d0  ; scroll very quickly- 8 pixels per increment
-  move.w #BPL4PTL,(a6)+  ; LO-bits of start of bitplane
+  add.w d1,d0
+  move.w #BPL3PTL,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
   swap d0
-  move.w #BPL4PTH,(a6)+  ; HI-bits of start of bitplane
+  move.w #BPL3PTH,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
 
-  move.l #mountains,d0
+  move.l #mountains+32000,d0
   ; this scrolls but the when the loop happens the colors will have shifted
-  add.w d1,d0  ; scroll very quickly- 8 pixels per increment
-  move.w #BPL6PTL,(a6)+  ; LO-bits of start of bitplane
+  add.w d1,d0
+  move.w #BPL5PTL,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
   swap d0
-  move.w #BPL6PTH,(a6)+  ; HI-bits of start of bitplane
+  move.w #BPL5PTH,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -294,6 +294,7 @@ main_loop:
   skip3:
 
   ; scroll every row the same
+  ; the mountains
   move.w #$0102,(a6)+  ; BPLCON1
   move.l frame,d2
   lsr #1,d2  ; slow down the scrolling
@@ -301,8 +302,10 @@ main_loop:
   move.w #$f,d3
   ; reverse direction because scrolling right
   sub.w d2,d3
-  ; scroll playfield2 faster 
+  ; scroll playfield2 slowerr
+  ; the sky
   move.l frame,d2
+  lsr #4,d2  ; slow down the scrolling
   and.w #$000f,d2
   move.w #$f,d4
   ; reverse direction because scrolling right
