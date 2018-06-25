@@ -262,10 +262,12 @@ skip_load_bpl
   move.l #$01ac0ffc,(a6)+  ; color 22
   move.l #$01ae0fff,(a6)+  ; color 23
   ; sprite 4,5 - bugs
-  move.l #$01a80000,(a6)+  ; color 25
-  move.l #$01aa0215,(a6)+  ; color 26
-  move.l #$01ac084a,(a6)+  ; color 27
-  move.l #$01ac06ab,(a6)+  ; color 27
+  move.l #$01b00000,(a6)+  ; color 25
+  move.l #$01b20215,(a6)+  ; color 26
+  move.l #$01b4084a,(a6)+  ; color 27
+  move.l #$01b606ab,(a6)+  ; color 29
+  ; sprite 6,7 - bugs?
+  ; TODO(lucasw) fill these colors in
   ; TODO(lucasw) unless wanting to cycle colors, could store the address
   ; at end of static copper list and then use it below for dynamic copper list stuff?
 
@@ -327,7 +329,7 @@ skip_load_bpl
   move.l #DUMMY_DST,SPR1PTH     ; Sprite 1 pointer = $30000 dummy sprite
   move.l #FIREBALL_DST,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR3PTH     ; Sprite 3 pointer = $25000 actually used sprite
-  move.l #DUMMY_DST,SPR4PTH     ; Sprite 4 pointer = $25000 actually used sprite
+  move.l #BUG_DST,SPR4PTH     ; Sprite 4 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR5PTH     ; Sprite 5 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR7PTH     ; Sprite 7 pointer = $25000 actually used sprite
@@ -407,13 +409,13 @@ test_fireball:
   bge shoot_fireball
 update_fireball:
   add.b #2,FIREBALL_DST+1
-  bra mouse_test
+  bra done_fireball
 
 shoot_fireball:
   ; shoot the fireball at the current ship location
   ; mouse/joy button 2
   btst.b #7,CIAAPRA
-  bne mouse_test
+  bne done_fireball
   ; copy the ship location first
   move.l (SHIP_DST),(FIREBALL_DST)
   add.b #2,FIREBALL_DST+1 ; offset the hstart to the front of the ship
@@ -421,6 +423,12 @@ shoot_fireball:
   ; the fireball vstop needs to be reset to vstart then the height of the fireball added
   move.b FIREBALL_DST,FIREBALL_DST+2  ; VSTOP
   add.b #8,FIREBALL_DST+2
+done_fireball:
+
+; update bug/s
+  .move.w frame,d0
+  ;lsr.w #3,d0
+  sub.b #1,BUG_DST+1
 
 mouse_test:
   ; if mousebutton/joystick 1 or 2 pressed then exit
@@ -511,7 +519,7 @@ fireball_data:
   incbin "gimp/fireball.data.raw"
   CNOP 4,4             ; End of sprite data
 bug_data:
-  dc.w    $00ff,$1000             ;VSTART, HSTART, VSTOP
+  dc.w    $4090,$5000             ;VSTART, HSTART, VSTOP
   incbin "gimp/bug.data.raw"
   CNOP 4,4             ; End of sprite data
 sky:
