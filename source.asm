@@ -68,7 +68,8 @@ SPR7PTL EQU $dff13E ; Sprite 7 pointer (low 15 bits)
 
 ; DMA memory is 0x0 - 0x7FFFF
 SHIP_DST EQU $25000
-FIREBALL_DST EQU $25000+ship_data-fireball_data
+FIREBALL_DST EQU $25000+fireball_data-ship_data
+BUG_DST EQU SHIP_DST+bug_data-ship_data
 DUMMY_DST EQU $30000
 
 init:
@@ -108,6 +109,9 @@ init:
   ; move.w #$3200,BPLCON0      ; three bitplanes, single playfield
   move.w #$6600,BPLCON0      ; three bitplanes, dual playfield
   move.w #$0000,BPLCON1      ; horizontal scroll 0
+  ; move.w BPLCON2,d0  ; moving BPLCON2 seems to change it
+  move.b #$1f,BPLCON2      ; priority
+
   ; move.w #$0004,BPLCON2      ; priority
   ; horizontal arrangement- given that the 3 color channels are on one row
   ; bplmod = (width of the playfield * (num bitplanes) - width screen) / 8
@@ -131,19 +135,28 @@ init:
   move.l #SHIP_DST,a1
   move.l #ship_data,a2
   move.w #32,d0
-  shiploop:
-    move.l (a2)+,(a1)+
-    dbra d0,shiploop
+  jsr copy_data
 
   move.l #FIREBALL_DST,a1
   move.l #fireball_data,a2
   move.w #8,d0
-  fireballloop:
+  jsr copy_data
+
+  move.l #BUG_DST,a1
+  move.l #bug_data,a2
+  move.w #16,d0
+  jsr copy_data
+
+  bra skip_copy_data
+copy_data:
+  copy_data_loop:
     move.l (a2)+,(a1)+
-    dbra d0,fireballloop
+    dbra d0,copy_data_loop
+  rts
 
   ; the dummy sprite
   move.l #$00000000,DUMMY_DST
+skip_copy_data:
 
 main_loop:
   ; increment frame count
@@ -161,38 +174,25 @@ main_loop:
   ; mountains bitplanes
 
   move.l frame,d1
-  ; scroll slowly
-  lsr #7,d1
-  ;mulu.w 120,d1
-  ; bitplane 0
+  lsr #7,d1 ; scroll slowly
   move.l #sky,d0
   ; this scrolls but the when the loop happens the colors will have shifted
   add.w d1,d0  ; scroll 8 pixels per increment
-  move.w #BPL2PTL,(a6)+  ; LO-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
-  swap d0
-  move.w #BPL2PTH,(a6)+  ; HI-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
+  move.w #BPL2PTL,d2
+  move.w #BPL2PTH,d3
+  jsr load_bpl
 
-  ; bitplane 3
-  ; move.l #sky+80,d0
   move.l #sky+16000,d0
   add.l d1,d0
-  move.w #BPL4PTL,(a6)+  ; LO-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e6 BPL3PTL  Bitplane pointer 2 (low 15 bits)
-  swap d0
-  move.w #BPL4PTH,(a6)+  ; HI-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e4 BPL3PTH  Bitplane pointer 2 (high 5 bits)
+  move.w #BPL4PTL,d2
+  move.w #BPL4PTH,d3
+  jsr load_bpl
 
-  ; bitplane 5
-  ; move.l #sky+160,d0
   move.l #sky+32000,d0
   add.l d1,d0
-  move.w #BPL6PTL,(a6)+  ; LO-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0ea BPL5PTL  Bitplane pointer 3 (low 15 bits)
-  swap d0
-  move.w #BPL6PTH,(a6)+  ; HI-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e8 BPL5PTH Bitplane pointer 3 (high 5 bits)
+  move.w #BPL6PTL,d2
+  move.w #BPL6PTH,d3
+  jsr load_bpl
 
   ;;;;;;;;;;;;;;;;;;;;;;
   ; mountains bitplanes
@@ -201,30 +201,34 @@ main_loop:
   move.l #mountains,d0
   ; this scrolls but the when the loop happens the colors will have shifted
   add.w d1,d0  ; scroll 8 pixels when this increments
-  move.w #BPL1PTL,(a6)+
-  move.w d0,(a6)+
-  swap d0
-  move.w #BPL1PTH,(a6)+
-  move.w d0,(a6)+
+  move.w #BPL1PTL,d2
+  move.w #BPL1PTH,d3
+  jsr load_bpl
 
   move.l #mountains+16000,d0
   ; this scrolls but the when the loop happens the colors will have shifted
   add.w d1,d0
-  move.w #BPL3PTL,(a6)+  ; LO-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
-  swap d0
-  move.w #BPL3PTH,(a6)+  ; HI-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
+  move.w #BPL3PTL,d2
+  move.w #BPL3PTH,d3
+  jsr load_bpl
 
   move.l #mountains+32000,d0
   ; this scrolls but the when the loop happens the colors will have shifted
   add.w d1,d0
-  move.w #BPL5PTL,(a6)+  ; LO-bits of start of bitplane
+  move.w #BPL5PTL,d2
+  move.w #BPL5PTH,d3
+  jsr load_bpl
+
+  bra skip_load_bpl
+load_bpl:  ; d0 is the movement amount, d2 is the BPLxPTL, d3 is BPLxPTH
+  ; a6 is the current copper address, d1 should be untouched
+  move.w d2,(a6)+  ; LO-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
   swap d0
-  move.w #BPL5PTH,(a6)+  ; HI-bits of start of bitplane
+  move.w d3,(a6)+  ; HI-bits of start of bitplane
   move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
-
+  rts
+skip_load_bpl
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   ; colors, last 3 characters/12 bits are rgb
@@ -257,11 +261,11 @@ main_loop:
   move.l #$01aa0fd0,(a6)+  ; color 21
   move.l #$01ac0ffc,(a6)+  ; color 22
   move.l #$01ae0fff,(a6)+  ; color 23
-  ; sprite 4,5
-  ; move.l #$01a80fd0,(a6)+  ; color 25
-  ; move.l #$01aa0ffc,(a6)+  ; color 26
-  ; move.l #$01ac0fff,(a6)+  ; color 27
-  ; move.l #$01ac0fff,(a6)+  ; color 27
+  ; sprite 4,5 - bugs
+  move.l #$01a80000,(a6)+  ; color 25
+  move.l #$01aa0215,(a6)+  ; color 26
+  move.l #$01ac084a,(a6)+  ; color 27
+  move.l #$01ac06ab,(a6)+  ; color 27
   ; TODO(lucasw) unless wanting to cycle colors, could store the address
   ; at end of static copper list and then use it below for dynamic copper list stuff?
 
@@ -505,6 +509,10 @@ ship_data:
 fireball_data:
   dc.w    $00ff,$1000             ;VSTART, HSTART, VSTOP
   incbin "gimp/fireball.data.raw"
+  CNOP 4,4             ; End of sprite data
+bug_data:
+  dc.w    $00ff,$1000             ;VSTART, HSTART, VSTOP
+  incbin "gimp/bug.data.raw"
   CNOP 4,4             ; End of sprite data
 sky:
   incbin "gimp/sky.data.raw"
