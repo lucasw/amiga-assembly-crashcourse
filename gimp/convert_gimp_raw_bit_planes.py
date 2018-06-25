@@ -24,6 +24,8 @@ first 320/8 = 40 bytes of bp 0, then 40 of 1, then 40 of bit plane 2
 
 '''
 
+import cv2
+import numpy as np
 import sys
 
 if len(sys.argv) < 5:
@@ -49,7 +51,8 @@ if len(data) < width:
     print "not enough data ", len(data)
     sys.exit(1)
 
-print "num_bytes: ", len(data), "rows: ", len(data) / width
+height = len(data) / width
+print "num_bytes: ", len(data), "height: ", height
 # Every bytes in the gimp indexed image is one byte regardless of how few
 # colors there are, it doesn't try to pack them tighter.
 # The next steps is to separate each byte into bit planes and then arrange
@@ -88,32 +91,50 @@ if len(packed_bit_planes) <= 0:
     print "no packed bit planes"
     sys.exit(1)
 
+if horizontal_mode:
+    viz = np.zeros((height, width * num_bit_planes, 1), np.uint8)
+else:
+    viz = np.zeros((height * num_bit_planes, width, 1), np.uint8)
+
 # arrange the bit planes in the desired order in the output file
 with open(data_file + '.raw', 'wb') as f:
     num_bytes = 0
 
+    ymax = len(packed_bit_planes[0]) / packed_width
+    print 'ymax', ymax
     if horizontal_mode:
         print 'horizontal mode'
-        for y in range(len(packed_bit_planes[0]) / packed_width):
+        for y in range(ymax):
             for bp_ind in range(len(packed_bit_planes)):
                 for x in range(packed_width):
                     ind = y * packed_width + x
                     img_byte = packed_bit_planes[bp_ind][ind]
                     f.write(chr(img_byte))
                     num_bytes += 1
+                    for i in range(bpb):
+                        if (1 << i) & img_byte:
+                            viz[y, width * bp_ind + x * bpb + (bpb - 1 - i)] = 255
     else:
         print 'vertical mode'
         for bp_ind in range(len(packed_bit_planes)):
             # don't need x and y, could just loop through data, but here for
             # symmetry with above
-            for y in range(len(packed_bit_planes[0]) / packed_width):
+            for y in range(ymax):
                 for x in range(packed_width):
                     ind = y * packed_width + x
                     img_byte = packed_bit_planes[bp_ind][ind]
                     f.write(chr(img_byte))
                     num_bytes += 1
+                    for i in range(bpb):
+                        if (1 << i) & img_byte:
+                            yv = height * bp_ind + y
+                            xv = x * bpb + (bpb - 1 - i)
+                            # print yv, xv, viz.shape
+                            viz[yv, xv] = 255
 
     print 'num_bytes ', num_bytes
+
+cv2.imwrite("viz.png", viz)
 
 # finally write the palette
 with open(data_file + ".pal", 'rb') as src, open(data_file + '_color.asm', 'w') as f:
