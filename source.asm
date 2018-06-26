@@ -10,6 +10,8 @@ ADKCON    EQU    $dff09e
 INTENA    EQU    $dff09a
 INTREQ    EQU    $dff09c
 
+CLXCON     EQU             $dff098  ; collision control
+CLXCON2    EQU             $dff098  ; collision control
 BPLCON0    EQU             $dff100
 BPLCON1    EQU             $dff102
 BPLCON2    EQU             $dff104
@@ -104,6 +106,9 @@ init:
   jsr -270(a6)  ; WaitTOF
   move.l $4,a6
   jsr -132(a6)  ; Forbid
+
+  ; allow all sprites to collide with each other
+  move.b #$f0,CLXCON+1
 
   ; setup displayhardware to show a 640x200px 3 bitplanes playfield
   ; with zero horizontal scroll and zero modulos
@@ -259,9 +264,9 @@ skip_load_bpl
   move.l #$019e0659,(a6)+  ; color 15
   ; sprite 0,1 - the ship
   move.l #$01a00000,(a6)+  ; color 16
-  move.l #$01a20000,(a6)+  ; color 17
-  move.l #$01a40a44,(a6)+  ; color 18
-  move.l #$01a60fff,(a6)+  ; color 19
+  move.l #$01a20300,(a6)+  ; color 17
+  move.l #$01a40b43,(a6)+  ; color 18
+  move.l #$01a60d98,(a6)+  ; color 19
   ; sprite 2,3 the fireball
   move.l #$01a80000,(a6)+  ; color 20
   move.l #$01aa0fd0,(a6)+  ; color 21

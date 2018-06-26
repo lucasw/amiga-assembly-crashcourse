@@ -134,7 +134,7 @@ with open(data_file + '.raw', 'wb') as f:
 
     print 'num_bytes ', num_bytes
 
-cv2.imwrite("viz.png", viz)
+cv2.imwrite(data_file + "_viz.png", viz)
 
 # finally write the palette
 with open(data_file + ".pal", 'rb') as src, open(data_file + '_color.asm', 'w') as f:
