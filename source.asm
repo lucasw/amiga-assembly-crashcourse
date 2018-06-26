@@ -69,7 +69,8 @@ SPR7PTL EQU $dff13E ; Sprite 7 pointer (low 15 bits)
 ; DMA memory is 0x0 - 0x7FFFF
 SHIP_DST EQU $25000
 FIREBALL_DST EQU $25000+fireball_data-ship_data
-BUG_DST EQU SHIP_DST+bug_data-ship_data
+BUG1_DST EQU FIREBALL_DST+sky_data-bug_data
+BUG2_DST EQU BUG1_DST+sky_data-bug_data
 DUMMY_DST EQU $30000
 
 init:
@@ -142,10 +143,19 @@ init:
   move.w #8,d0
   jsr copy_data
 
-  move.l #BUG_DST,a1
+  move.l #BUG1_DST,a1
   move.l #bug_data,a2
   move.w #16,d0
   jsr copy_data
+  sub.b #10,BUG1_DST+1
+
+  move.l #BUG2_DST,a1
+  move.l #bug_data,a2
+  move.w #16,d0
+  jsr copy_data
+  ; move this one lower
+  add.b #30,BUG2_DST
+  add.b #30,BUG2_DST+2
 
   bra skip_copy_data
 copy_data:
@@ -175,20 +185,19 @@ main_loop:
 
   move.l frame,d1
   lsr #7,d1 ; scroll slowly
-  move.l #sky,d0
-  ; this scrolls but the when the loop happens the colors will have shifted
+  move.l #sky_data,d0
   add.w d1,d0  ; scroll 8 pixels per increment
   move.w #BPL2PTL,d2
   move.w #BPL2PTH,d3
   jsr load_bpl
 
-  move.l #sky+16000,d0
+  move.l #sky_data+16000,d0
   add.l d1,d0
   move.w #BPL4PTL,d2
   move.w #BPL4PTH,d3
   jsr load_bpl
 
-  move.l #sky+32000,d0
+  move.l #sky_data+32000,d0
   add.l d1,d0
   move.w #BPL6PTL,d2
   move.w #BPL6PTH,d3
@@ -198,22 +207,19 @@ main_loop:
   ; mountains bitplanes
   move.l frame,d1
   lsr #4,d1
-  move.l #mountains,d0
-  ; this scrolls but the when the loop happens the colors will have shifted
+  move.l #mountains_data,d0
   add.w d1,d0  ; scroll 8 pixels when this increments
   move.w #BPL1PTL,d2
   move.w #BPL1PTH,d3
   jsr load_bpl
 
-  move.l #mountains+16000,d0
-  ; this scrolls but the when the loop happens the colors will have shifted
+  move.l #mountains_data+16000,d0
   add.w d1,d0
   move.w #BPL3PTL,d2
   move.w #BPL3PTH,d3
   jsr load_bpl
 
-  move.l #mountains+32000,d0
-  ; this scrolls but the when the loop happens the colors will have shifted
+  move.l #mountains_data+32000,d0
   add.w d1,d0
   move.w #BPL5PTL,d2
   move.w #BPL5PTH,d3
@@ -233,24 +239,24 @@ skip_load_bpl
 
   ; colors, last 3 characters/12 bits are rgb
   ; TODO(lucasw) replace with inc() command to get externally generated palett
-  ; playfield 1
+  ; playfield 1 - foreground mountains
   move.l #$01800000,(a6)+  ; color 0
-  move.l #$01820fff,(a6)+  ; color 1
-  move.l #$01840569,(a6)+  ; color 2
-  move.l #$01860cc3,(a6)+  ; color 3
-  move.l #$01880235,(a6)+  ; color 4
-  move.l #$018a0545,(a6)+  ; color 5
-  move.l #$018c0a46,(a6)+  ; color 6
-  move.l #$018e0e60,(a6)+  ; color 7
-  ; playfield 2
+  move.l #$01820000,(a6)+  ; color 1
+  move.l #$01840235,(a6)+  ; color 2
+  move.l #$01860e01,(a6)+  ; color 3
+  move.l #$01880545,(a6)+  ; color 4
+  move.l #$018a0a36,(a6)+  ; color 5
+  move.l #$018c0569,(a6)+  ; color 6
+  move.l #$018e0b83,(a6)+  ; color 7
+  ; playfield 2 - background sky
   move.l #$01900000,(a6)+  ; color 8
-  move.l #$01920235,(a6)+  ; color 9
-  move.l #$01940e01,(a6)+  ; color 10
-  move.l #$01960545,(a6)+  ; color 11
-  move.l #$01980a36,(a6)+  ; color 12
-  move.l #$019a0569,(a6)+  ; color 13
-  move.l #$019c0b83,(a6)+  ; color 14
-  move.l #$019e0fff,(a6)+  ; color 15
+  move.l #$01920fff,(a6)+  ; color 9
+  move.l #$01940112,(a6)+  ; color 10
+  move.l #$01960324,(a6)+  ; color 11
+  move.l #$01980446,(a6)+  ; color 12
+  move.l #$019a0545,(a6)+  ; color 13
+  move.l #$019c0946,(a6)+  ; color 14
+  move.l #$019e0659,(a6)+  ; color 15
   ; sprite 0,1 - the ship
   move.l #$01a00000,(a6)+  ; color 16
   move.l #$01a20000,(a6)+  ; color 17
@@ -263,7 +269,7 @@ skip_load_bpl
   move.l #$01ae0fff,(a6)+  ; color 23
   ; sprite 4,5 - bugs
   move.l #$01b00000,(a6)+  ; color 25
-  move.l #$01b20215,(a6)+  ; color 26
+  move.l #$01b20437,(a6)+  ; color 26
   move.l #$01b4084a,(a6)+  ; color 27
   move.l #$01b606ab,(a6)+  ; color 29
   ; sprite 6,7 - bugs?
@@ -329,8 +335,8 @@ skip_load_bpl
   move.l #DUMMY_DST,SPR1PTH     ; Sprite 1 pointer = $30000 dummy sprite
   move.l #FIREBALL_DST,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR3PTH     ; Sprite 3 pointer = $25000 actually used sprite
-  move.l #BUG_DST,SPR4PTH     ; Sprite 4 pointer = $25000 actually used sprite
-  move.l #DUMMY_DST,SPR5PTH     ; Sprite 5 pointer = $25000 actually used sprite
+  move.l #BUG1_DST,SPR4PTH
+  move.l #BUG2_DST,SPR5PTH
   move.l #DUMMY_DST,SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR7PTH     ; Sprite 7 pointer = $25000 actually used sprite
 
@@ -426,9 +432,11 @@ shoot_fireball:
 done_fireball:
 
 ; update bug/s
-  .move.w frame,d0
-  ;lsr.w #3,d0
-  sub.b #1,BUG_DST+1
+  ;move.b frame,d0
+  ;and.b #$01,d0
+  ; lsr.w #3,d0
+  sub.b #1,BUG1_DST+1
+  sub.b #1,BUG2_DST+1
 
 mouse_test:
   ; if mousebutton/joystick 1 or 2 pressed then exit
@@ -519,14 +527,14 @@ fireball_data:
   incbin "gimp/fireball.data.raw"
   CNOP 4,4             ; End of sprite data
 bug_data:
-  dc.w    $4090,$5000             ;VSTART, HSTART, VSTOP
+  dc.w    $40f0,$5000             ;VSTART, HSTART, VSTOP
   incbin "gimp/bug.data.raw"
   CNOP 4,4             ; End of sprite data
-sky:
+sky_data:
   incbin "gimp/sky.data.raw"
   ; datalists aligned to 32-bit
   CNOP 0,4
-mountains:
+mountains_data:
   incbin "gimp/mountains.data.raw"
   ; datalists aligned to 32-bit
   CNOP 0,4
