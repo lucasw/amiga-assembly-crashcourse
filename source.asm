@@ -10,8 +10,10 @@ ADKCON    EQU    $dff09e
 INTENA    EQU    $dff09a
 INTREQ    EQU    $dff09c
 
-CLXCON     EQU             $dff098  ; collision control
-CLXCON2    EQU             $dff098  ; collision control
+CLXCON   EQU  $dff098  ; collision control
+CLXCON2  EQU  $dff10e  ; collision control
+CLXDAT   EQU  $dff00e  ; collision detection
+
 BPLCON0    EQU             $dff100
 BPLCON1    EQU             $dff102
 BPLCON2    EQU             $dff104
@@ -407,6 +409,25 @@ skip_load_bpl
     move_down:
       add.w #$1,d3
   done_joy:
+
+  ; collision detection
+  move.w CLXDAT,d0
+  ; ship bug collision
+  btst.l #10,d0
+  bne ship_bug_collision
+  bra test_fireball_bug_collision
+ship_bug_collision:
+  sub.b #10,SHIP_DST+1
+
+test_fireball_bug_collision:
+  btst.l #12,d0
+  bne fireball_bug_collision
+  bra done_collision
+fireball_bug_collision:
+  move.b #250,FIREBALL_DST+1
+  add.b #5,BUG1_DST+1
+  add.b #5,BUG2_DST+1
+done_collision:
 
 ship_update:
   add.b d2,SHIP_DST+1  ; HSTART The offset is relative to the .b/.w/.l size
