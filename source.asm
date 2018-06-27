@@ -51,6 +51,26 @@ CIAASDR    EQU             $bfec01
 JOY0DAT EQU $dff00a
 JOY1DAT EQU $dff00c
 
+; SPRxCTL
+;15-08 EV7-EV0 End (stop) vertical value. Low 8 bits
+;07  ATT Sprite attach control bit (odd sprites only)
+;06  SV9 Start vertical value 10th bit
+;05  EV9 End (stop) vertical value 10th bit
+;04  SH1=0 Start horizontal value, 70nS increment
+;03  SH0=0 Start horizontal value 35nS increment
+;02  SV8 Start vertical value 9th bit
+;01  EV8 End (stop) vertical value 9th bit
+;00  SH2 Start horizontal value, 140nS increment
+
+SPR0CTL EQU $dff142  ; Sprite 0 position and control data
+SPR1CTL EQU $dff14A  ; Sprite 1 position and control data
+SPR2CTL EQU $dff152  ; Sprite 2 position and control data
+SPR3CTL EQU $dff15A  ; Sprite 3 position and control data
+SPR4CTL EQU $dff162  ; Sprite 4 position and control data
+SPR5CTL EQU $dff16A  ; Sprite 5 position and control data
+SPR6CTL EQU $dff172  ; Sprite 6 position and control data
+SPR7CTL EQU $dff17A  ; Sprite 7 position and control data
+
 SPR0PTH EQU $dff120 ; Sprite 0 pointer (high 5 bits)
 SPR0PTL EQU $dff122 ; Sprite 0 pointer (low 15 bits)
 SPR1PTH EQU $dff124 ; Sprite 1 pointer (high 5 bits)
@@ -154,7 +174,28 @@ init:
   move.l #bug_data,a2
   move.w #16,d0
   jsr copy_data
-  sub.b #10,BUG1_DST+1
+
+  ; position the bug
+  bra skip5
+  ; doesn't work
+  move.l #enemy0,a1
+  move.w #20,(a1)+  ; y1
+  move.w #50,(a1)+   ; x1
+  move.w #(20+16),(a1)+  ; y2
+  move.w #(50+16),(a1)+  ; x2
+  move.l #enemy0,a1
+  move.b (a1)+,BUG1_DST    ; VSTART
+  move.b (a1)+,BUG1_DST+1  ; HSTART The offset is relative to the .b/.w/.l size
+  move.b (a1),BUG1_DST+2   ; VSTOP
+  ; TODO add the higher bits to SPRxCTL
+  skip5:
+  ; works
+  move.b #$60,enemy0    ; VSTART
+  move.b #$a8,enemy0+1  ; HSTART The offset is relative to the .b/.w/.l size
+  move.b #($60+$10),enemy0+2   ; VSTOP
+  move.b enemy0,BUG1_DST    ; VSTART
+  move.b enemy0+1,BUG1_DST+1  ; HSTART
+  move.b enemy0+2,BUG1_DST+2  ; VSTOP
 
   move.l #BUG2_DST,a1
   move.l #bug_data,a2
@@ -410,6 +451,12 @@ skip_load_bpl
       add.w #$1,d3
   done_joy:
 
+ship_update:
+  add.b d2,SHIP_DST+1  ; HSTART The offset is relative to the .b/.w/.l size
+  add.b d3,SHIP_DST    ; VSTART
+  add.b d3,SHIP_DST+2  ; VSTOP
+
+  ;;;;;;;;;;;;;;;;;;;;;;;
   ; collision detection
   move.w CLXDAT,d0
   ; ship bug collision
@@ -428,11 +475,6 @@ fireball_bug_collision:
   add.b #5,BUG1_DST+1
   add.b #5,BUG2_DST+1
 done_collision:
-
-ship_update:
-  add.b d2,SHIP_DST+1  ; HSTART The offset is relative to the .b/.w/.l size
-  add.b d3,SHIP_DST    ; VSTART
-  add.b d3,SHIP_DST+2  ; VSTOP
 
 test_fireball:
   move.l #0,d0
@@ -457,12 +499,25 @@ shoot_fireball:
   add.b #8,FIREBALL_DST+2
 done_fireball:
 
-; update bug/s
+;;;;;;;;;;;;;;;;
+update_enemies:
+  bra skip4
   ;move.b frame,d0
   ;and.b #$01,d0
   ; lsr.w #3,d0
-  sub.b #1,BUG1_DST+1
-  sub.b #1,BUG2_DST+1
+  move.l #enemy0,a1
+  sub.w #0,(a1)+  ; y1
+  sub.w #1,(a1)+  ; x1
+  sub.w #0,(a1)+  ; y2
+  move.l #enemy0,a1
+  move.b (a1)+,BUG1_DST    ; VSTART
+  move.b (a1)+,BUG1_DST+1  ; HSTART The offset is relative to the .b/.w/.l size
+  move.b (a1),BUG1_DST+2   ; VSTOP
+  ; TODO add the higher bits to SPRxCTL
+
+skip4:
+  ;sub.b #1,BUG1_DST+1
+  ;sub.b #1,BUG2_DST+1
 
 mouse_test:
   ; if mousebutton/joystick 1 or 2 pressed then exit
@@ -522,6 +577,33 @@ frame:
   dc.l 0
   ; storage for 16-bit data
   CNOP 0,4
+enemies:
+enemy0:
+  dc.l 0  ; y1,x1
+  dc.l 0  ; y2,x2
+  ; TBD health, trajectory, type, status (including whether enabled or not)
+enemy1:
+  dc.l 0
+  dc.l 0
+enemy2:
+  dc.l 0
+  dc.l 0
+enemy3:
+  dc.l 0
+  dc.l 0
+enemy4:
+  dc.l 0
+  dc.l 0
+enemy5:
+  dc.l 0
+  dc.l 0
+enemy6:
+  dc.l 0
+  dc.l 0
+enemy7:
+  dc.l 0
+  dc.l 0
+  CNOP 0,4
 olddmareq: dc.w 0
 oldintreq: dc.w 0
 oldintena: dc.w 0
@@ -553,7 +635,10 @@ fireball_data:
   incbin "gimp/fireball.data.raw"
   CNOP 4,4             ; End of sprite data
 bug_data:
-  dc.w    $40f0,$5000             ;VSTART, HSTART, VSTOP
+  ; 0x48 is far left (with no pixels off screen to left
+  ; 0xd8 seems to be almost the end of the screen- is hstart added to another number
+  ; (diwstrt?), otherwise
+  dc.w    $40d8,$5000             ;VSTART, HSTART, VSTOP
   incbin "gimp/bug.data.raw"
   CNOP 4,4             ; End of sprite data
 sky_data:
