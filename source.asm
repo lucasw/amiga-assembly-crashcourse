@@ -176,26 +176,45 @@ init:
   jsr copy_data
 
   ; position the bug
-  bra skip5
   ; doesn't work
-  move.l #enemy0,a1
-  move.w #20,(a1)+  ; y1
-  move.w #50,(a1)+   ; x1
-  move.w #(20+16),(a1)+  ; y2
-  move.w #(50+16),(a1)+  ; x2
-  move.l #enemy0,a1
-  move.b (a1)+,BUG1_DST    ; VSTART
-  move.b (a1)+,BUG1_DST+1  ; HSTART The offset is relative to the .b/.w/.l size
-  move.b (a1),BUG1_DST+2   ; VSTOP
+  ;move.l #enemy0,a1
+  ;move.w #60,(a1)+  ; y1
+  ;move.w #50,(a1)+   ; x1
+  ;move.w #(60+16),(a1)+  ; y2
+  ;move.w #(50+16),(a1)+  ; x2
+
+  ;move.l #enemy0,a1
+  ;move.b (a1)+,BUG1_DST    ; VSTART
+  ; move.b (a1)+,BUG1_DST+1  ; HSTART The offset is relative to the .b/.w/.l size
+  ;move.b (a1),BUG1_DST+2   ; VSTOP
+  ; move.b works fine for vstart and stop
+  ; maybe hstart is special?
+ ; add.b #60,BUG1_DST  ; VSTART
+ ; add.b #60,BUG1_DST+2  ; VSTART
+  move.b #$70,BUG1_DST
+  ; move.b #$40,BUG1_DST+1
+  move.b #$80,BUG1_DST+2
+  ; move.b into hstart makes the sprite disappear, but sub.b works
+ ; move.b #60,BUG1_DST    ; VSTART
+  sub.b #20,BUG1_DST+1  ; HSTART
+ ; move.b #(60+16),BUG1_DST+2  ; VSTOP
   ; TODO add the higher bits to SPRxCTL
+  bra skip6
   skip5:
   ; works
-  move.b #$60,enemy0    ; VSTART
-  move.b #$a8,enemy0+1  ; HSTART The offset is relative to the .b/.w/.l size
-  move.b #($60+$10),enemy0+2   ; VSTOP
-  move.b enemy0,BUG1_DST    ; VSTART
-  move.b enemy0+1,BUG1_DST+1  ; HSTART
-  move.b enemy0+2,BUG1_DST+2  ; VSTOP
+  move.w #$60,enemy0    ; VSTART
+  ; these glitch the screen up
+  ; move.w #$a8,enemy0+1  ; HSTART The offset is relative to the .b/.w/.l size
+  ; move.w #$00a8,enemy0+1  ; HSTART The offset is relative to the .b/.w/.l size
+  ; but this works- I thought the +1 was relative to the size of the move command?
+  ; maybe 'enemy' is always word aligned
+  move.w #$68,enemy0+2  ; HSTART The offset is relative to the .b/.w/.l size
+  move.w #($60+$10),enemy0+4   ; VSTOP
+  ; doesn't work
+  ; move.b enemy0,BUG1_DST    ; VSTART
+  ; move.b enemy0+2,BUG1_DST+1  ; HSTART
+  ; move.b enemy0+4,BUG1_DST+2  ; VSTOP
+skip6:
 
   move.l #BUG2_DST,a1
   move.l #bug_data,a2
@@ -582,24 +601,31 @@ enemy0:
   dc.l 0  ; y1,x1
   dc.l 0  ; y2,x2
   ; TBD health, trajectory, type, status (including whether enabled or not)
+  CNOP 0,4
 enemy1:
   dc.l 0
   dc.l 0
+  CNOP 0,4
 enemy2:
   dc.l 0
   dc.l 0
+  CNOP 0,4
 enemy3:
   dc.l 0
   dc.l 0
+  CNOP 0,4
 enemy4:
   dc.l 0
   dc.l 0
+  CNOP 0,4
 enemy5:
   dc.l 0
   dc.l 0
+  CNOP 0,4
 enemy6:
   dc.l 0
   dc.l 0
+  CNOP 0,4
 enemy7:
   dc.l 0
   dc.l 0
