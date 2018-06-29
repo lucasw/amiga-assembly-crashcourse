@@ -599,15 +599,18 @@ update_enemies:
   ; lsr.w #3,d0
 
   ; TODO(lwalter) enemy0+8 should be xvel, +10 should be yvel
-  sub.w #0,enemy0    ; y1
+  add.w #0,enemy0    ; y1
   sub.w #0,enemy0+2  ; x1
-  sub.w #0,enemy0+4  ; y2
+  add.w #0,enemy0+4  ; y2
   sub.w #0,enemy0+6  ; x2
 
   sub.w #0,enemy1    ; y1
   sub.w #0,enemy1+2  ; x1
   sub.w #0,enemy1+4  ; y2
   sub.w #0,enemy1+6  ; x2
+  ; TODO(lwalter) need to reposition the sprites at right of screen,
+  ; they can wrap around visually but the rect rect collision will fail because the high
+  ; order bits aren't colliding.
 
 mouse_test:
   ; if mousebutton/joystick 1 or 2 pressed then exit
