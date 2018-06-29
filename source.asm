@@ -170,39 +170,40 @@ init:
   move.w #8,d0
   jsr copy_data
 
+  ;;;;;;;;;;;;;;;;;;;
+  ; Enemy 0
   move.l #BUG1_DST,a1
   move.l #bug_data,a2
   move.w #16,d0
   jsr copy_data
 
   ; position the bug
-  ; move.b into hstart makes the sprite disappear, but sub.b works
-  ; move.b #60,BUG1_DST    ; VSTART
-  sub.b #20,BUG1_DST+1  ; HSTART
-  ; move.b #(60+16),BUG1_DST+2  ; VSTOP
-  ; TODO add the higher bits to SPRxCTL
-  bra skip6
-  skip5:
   ; works
-  move.w #$60,enemy0    ; y1
-  move.w #$80,enemy0+2  ; x1
-  move.w #$70,enemy0+4  ; y2
-  move.w #$90,enemy0+6  ; x1
+  move.w #$0060,enemy0    ; y1
+  move.w #$0090,enemy0+2  ; x1
+  move.w #$0070,enemy0+4  ; y2
+  move.w #$0090,enemy0+6  ; x1
   ; these glitch the screen up - because using words with non-aligned odd address
-  ; move.w #$a8,enemy0+1  ; HSTART The offset is relative to the .b/.w/.l size
-  move.b enemy0,BUG1_DST    ; VSTART
-  move.b enemy0+2,BUG1_DST+1  ; HSTART
-  move.b enemy0+4,BUG1_DST+2  ; VSTOP
-skip6:
+  move.b enemy0+1,BUG1_DST    ; VSTART
+  move.b enemy0+3,BUG1_DST+1  ; HSTART
+  move.b enemy0+5,BUG1_DST+2  ; VSTOP
 
+  ; Enemy 1
   move.l #BUG2_DST,a1
   move.l #bug_data,a2
   move.w #16,d0
   jsr copy_data
-  ; move this one lower
-  add.b #30,BUG2_DST
-  add.b #30,BUG2_DST+2
 
+  move.w #$0030,enemy1    ; y1
+  move.w #$00a0,enemy1+2  ; x1
+  move.w #$0040,enemy1+4  ; y2
+  move.w #$0060,enemy1+6  ; x1
+  ; these glitch the screen up - because using words with non-aligned odd address
+  move.b enemy1+1,BUG2_DST    ; VSTART
+  move.b enemy1+3,BUG2_DST+1  ; HSTART
+  move.b enemy1+5,BUG2_DST+2  ; VSTOP
+
+  ;;;;;;;;;;;;;;;;;;;;;
   bra skip_copy_data
 copy_data:
   copy_data_loop:
@@ -353,6 +354,8 @@ skip_load_bpl
 
   ; scroll every row the same
   ; the mountains
+  ; TODO(lucasw) the calculations to determine the scroll speed
+  ; should be done outside of the setting of the copper list?
   move.w #$0102,(a6)+  ; BPLCON1
   move.l frame,d2
   lsr #1,d2  ; slow down the scrolling
@@ -377,6 +380,8 @@ skip_load_bpl
   move.l #$fffffffe,(a6)+
 
   ; setup sprite registers, have to be setup every vblank
+  ; TODO(lucaw) but this isn't the vblank?  or it is still vblank
+  ; because before jumping to mainloop there was a wait for vblank.
   move.l #SHIP_DST,SPR0PTH     ; Sprite 0 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR1PTH     ; Sprite 1 pointer = $30000 dummy sprite
   move.l #FIREBALL_DST,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
@@ -470,8 +475,8 @@ test_fireball_bug_collision:
   bra done_collision
 fireball_bug_collision:
   move.b #250,FIREBALL_DST+1
-  add.b #5,BUG1_DST+1
-  add.b #5,BUG2_DST+1
+  add.w #6,enemy0+2  ; x1
+  add.w #6,enemy0+6  ; x2
 done_collision:
 
 test_fireball:
@@ -497,9 +502,7 @@ shoot_fireball:
   add.b #8,FIREBALL_DST+2
 done_fireball:
 
-;;;;;;;;;;;;;;;;
-update_enemies:
-  ;move.b frame,d0
+;move.b frame,d0
   ;and.b #$01,d0
   ; lsr.w #3,d0
 
@@ -507,15 +510,22 @@ update_enemies:
   ;add.w #1,enemy0+2  ; x1
   ;sub.w #0,enemy0+4  ; y2
   ;sub.w #1,enemy0+6  ; x2
-  ; Setting these here causes the enemy to disappear- maybe the timing is wrong?
-  ; move.b enemy0,BUG1_DST    ; VSTART
-  ; move.b enemy0+2,BUG1_DST+1  ; HSTART
-  ;move.b enemy0+4,BUG1_DST+2   ; VSTOP
-  ; TODO add the higher bits to SPRxCTL
 
-skip4:
-  ;sub.b #1,BUG1_DST+1
-  ;sub.b #1,BUG2_DST+1
+update_enemies:
+;move.b frame,d0
+  ;and.b #$01,d0
+  ; lsr.w #3,d0
+
+  ; TODO(lwalter) enemy0+8 should be xvel, +10 should be yvel
+  sub.w #0,enemy0    ; y1
+  sub.w #1,enemy0+2  ; x1
+  sub.w #0,enemy0+4  ; y2
+  sub.w #1,enemy0+6  ; x2
+
+  sub.w #0,enemy1    ; y1
+  sub.w #1,enemy1+2  ; x1
+  sub.w #0,enemy1+4  ; y2
+  sub.w #1,enemy1+6  ; x2
 
 mouse_test:
   ; if mousebutton/joystick 1 or 2 pressed then exit
@@ -525,6 +535,7 @@ mouse_test:
   ; btst.b #7,CIAAPRA
   ; beq exit
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Wait for vertical blanking before taking the copper list into use
 waitVB:
   move.l VPOSR,d0
@@ -535,6 +546,23 @@ waitVB:
   ; Take copper list into use
   move.l #copper_list,a6
   move.l a6,COP1LCH
+
+;;;;;;;;;;;;;;;;
+; seems like this should be done during vblank unless re-using sprites
+update_sprite_registers:
+  move.b enemy0+1,BUG1_DST    ; VSTART
+  move.b enemy0+3,BUG1_DST+1  ; HSTART
+  move.b enemy0+5,BUG1_DST+2  ; VSTOP
+  move.b enemy1+1,BUG2_DST    ; VSTART
+  move.b enemy1+3,BUG2_DST+1  ; HSTART
+  move.b enemy1+5,BUG2_DST+2  ; VSTOP
+  ; TODO add the higher bits to SPRxCTL?
+
+skip4:
+  ;sub.b #1,BUG1_DST+1
+  ;sub.b #1,BUG2_DST+1
+
+  ;;;;;;;;;;;;;
   bra main_loop
 
 exit:
