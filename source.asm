@@ -179,6 +179,11 @@ init:
   move.l #fireball_data,a2
   move.w #8,d0
 
+  move.w #250,fireball0+2
+  move.w #250,fireball0+6
+  move.w #250,fireball1+2
+  move.w #250,fireball1+6
+
   ;;;;;;;;;;;;;;;;;;;
   ; Enemy 0
   move.l #BUG1_DST,a1
@@ -479,6 +484,7 @@ ship_update:
 ship_bug_collision:
   sub.w #10,player_ship+2
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 test_fireball_bug_collision:
   btst.l #12,d0
   bne fireball_bug_collision
@@ -489,12 +495,13 @@ fireball_bug_collision:
 ; TODO(lucasw) this needs to be a double for loop- loop through all
 ; fireballs, which loop through all enemies
   move.l #fireball0,a1
-test_enemy0_collision
+  ; bra test_enemy1_collision  ; temp disable of enemy0 detection
+test_enemy0_collision:
   move.l #enemy0,a2
+  jsr rect_rect_detect
   ; the lea method is faster than jsr, but maybe can only be used
   ; from near enough code?
   ; http://www.easy68k.com/paulrsm/doc/trick68k.htm
-  jsr rect_rect_detect
   ;lea #test_enemy0_collision_return,a0
   ;jmp rect_rect_detect
 test_enemy0_collision_return:
@@ -503,9 +510,11 @@ test_enemy0_collision_return:
   add.w #6,enemy0+2  ; x1
   add.w #6,enemy0+6  ; x2
   bra done_collision
+
 test_enemy1_collision:
-  bra done_collision ; temp disable
-  move.l #enemy0,a2
+  ;bra done_collision ; temp disable of enemy1 detection
+  move.l #enemy1,a2
+  jsr rect_rect_detect
   ; lea #test_enemy1_collision_return,a0
   ; jmp rect_rect_detect
 test_enemy1_collision_return:
