@@ -488,18 +488,27 @@ fireball_bug_collision:
   ;move.w #250,fireball0+6
 ; TODO(lucasw) this needs to be a double for loop- loop through all
 ; fireballs, which loop through all enemies
-  move fireball0,a1
+  move.l #fireball0,a1
 test_enemy0_collision
-  move enemy0,a2
+  move.l #enemy0,a2
+  ; the lea method is faster than jsr, but maybe can only be used
+  ; from near enough code?
+  ; http://www.easy68k.com/paulrsm/doc/trick68k.htm
   jsr rect_rect_detect
+  ;lea #test_enemy0_collision_return,a0
+  ;jmp rect_rect_detect
+test_enemy0_collision_return:
   cmp.b #$1,d0
   bne test_enemy1_collision
   add.w #6,enemy0+2  ; x1
   add.w #6,enemy0+6  ; x2
   bra done_collision
-test_enemy1_collision
-  move enemy0,a2
-  jsr rect_rect_detect
+test_enemy1_collision:
+  bra done_collision ; temp disable
+  move.l #enemy0,a2
+  ; lea #test_enemy1_collision_return,a0
+  ; jmp rect_rect_detect
+test_enemy1_collision_return:
   cmp.b #$1,d0
   bne done_collision
   add.w #6,enemy1+2  ; x1
@@ -507,30 +516,41 @@ test_enemy1_collision
   bra done_collision
 
 rect_rect_detect:
+  ; a0 is return address
   ; a1 is rect 1 with y1 x1 y2 x2 in sequential words
   ; a2 is rect 2 similarly laid out
   ; d0 will be set to 1 if there is overlap
-  move.b #$1,d0
-  rts
-
   ; can't dow cmp.w 6(a1),2(a2) , the second arg can't be displaced
-  move.w (a2)+,d1
-  move.w (a2)+,d2
-  move.w (a2)+,d3
-  move.w (a2)+,d4
-  cmp.w 6(a1),d1  ; 2(a2)
-  blt.w rect_no_overlap
-  cmp.w 2(a1),d2
-  bgt.w rect_no_overlap
-  cmp.w (a1),d3
-  blt.w rect_no_overlap
-  cmp.w 4(a1),d4
-  bgt.w rect_no_overlap
+
+  move.w (a1),d1
+  move.w 4(a2),d2
+  ; cmp.w 4(a1),d1  ; fewer instructions
+  cmp.w d1,d2
+  bgt rect_no_overlap
+
+  move.w (a2),d1
+  move.w 4(a1),d2
+  cmp.w d1,d2
+  bgt rect_no_overlap
+
+  move.w 2(a1),d1
+  move.w 6(a2),d2
+  cmp.w d1,d2
+  bgt rect_no_overlap
+
+  move.w 2(a2),d1
+  move.w 6(a1),d2
+  cmp.w d1,d2
+  bgt rect_no_overlap
+
+  ; there was an overlap
   move.b #$1,d0
   rts
+  ;jmp (a0)
 rect_no_overlap:
   move.b #$0,d0
   rts
+  ;jmp (a0)
 ;;;;;;;;;;;;;;;;;;;;;;;;
 done_collision:
 test_fireball:
@@ -564,20 +584,20 @@ done_fireball:
   ;sub.w #1,enemy0+6  ; x2
 
 update_enemies:
-;move.b frame,d0
+  ;move.b frame,d0
   ;and.b #$01,d0
   ; lsr.w #3,d0
 
   ; TODO(lwalter) enemy0+8 should be xvel, +10 should be yvel
   sub.w #0,enemy0    ; y1
-  sub.w #1,enemy0+2  ; x1
+  sub.w #0,enemy0+2  ; x1
   sub.w #0,enemy0+4  ; y2
-  sub.w #1,enemy0+6  ; x2
+  sub.w #0,enemy0+6  ; x2
 
   sub.w #0,enemy1    ; y1
-  sub.w #1,enemy1+2  ; x1
+  sub.w #0,enemy1+2  ; x1
   sub.w #0,enemy1+4  ; y2
-  sub.w #1,enemy1+6  ; x2
+  sub.w #0,enemy1+6  ; x2
 
 mouse_test:
   ; if mousebutton/joystick 1 or 2 pressed then exit
