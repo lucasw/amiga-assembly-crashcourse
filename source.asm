@@ -92,8 +92,9 @@ SPR7PTL EQU $dff13E ; Sprite 7 pointer (low 15 bits)
 
 ; DMA memory is 0x0 - 0x7FFFF
 SHIP_DST EQU $25000
-FIREBALL_DST EQU $25000+fireball_data-ship_data
-BUG1_DST EQU FIREBALL_DST+sky_data-bug_data
+FIREBALL0_DST EQU $25000+fireball_data-ship_data
+FIREBALL1_DST EQU FIREBALL0_DST+fireball_data-ship_data
+BUG1_DST EQU FIREBALL1_DST+sky_data-bug_data
 BUG2_DST EQU BUG1_DST+sky_data-bug_data
 DUMMY_DST EQU $30000
 
@@ -165,10 +166,18 @@ init:
   move.w #32,d0
   jsr copy_data
 
-  move.l #FIREBALL_DST,a1
+  move.w #$0080,player_ship    ; y1
+  move.w #$0050,player_ship+2  ; x1
+  move.w #$00a0,player_ship+4  ; y2
+  move.w #$0060,player_ship+6  ; x1
+
+  move.l #FIREBALL0_DST,a1
   move.l #fireball_data,a2
   move.w #8,d0
   jsr copy_data
+  move.l #FIREBALL1_DST,a1
+  move.l #fireball_data,a2
+  move.w #8,d0
 
   ;;;;;;;;;;;;;;;;;;;
   ; Enemy 0
@@ -384,8 +393,8 @@ skip_load_bpl
   ; because before jumping to mainloop there was a wait for vblank.
   move.l #SHIP_DST,SPR0PTH     ; Sprite 0 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR1PTH     ; Sprite 1 pointer = $30000 dummy sprite
-  move.l #FIREBALL_DST,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
-  move.l #DUMMY_DST,SPR3PTH     ; Sprite 3 pointer = $25000 actually used sprite
+  move.l #FIREBALL0_DST,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
+  move.l #FIREBALL1_DST,SPR3PTH     ; Sprite 2 pointer = $25000 actually used sprite
   move.l #BUG1_DST,SPR4PTH
   move.l #BUG2_DST,SPR5PTH
   move.l #DUMMY_DST,SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
@@ -455,9 +464,10 @@ skip_load_bpl
   done_joy:
 
 ship_update:
-  add.b d2,SHIP_DST+1  ; HSTART The offset is relative to the .b/.w/.l size
-  add.b d3,SHIP_DST    ; VSTART
-  add.b d3,SHIP_DST+2  ; VSTOP
+  add.w d2,player_ship+2  ; x
+  add.w d2,player_ship+6
+  add.w d3,player_ship    ; y
+  add.w d3,player_ship+4
 
   ;;;;;;;;;;;;;;;;;;;;;;;
   ; collision detection
@@ -467,39 +477,81 @@ ship_update:
   bne ship_bug_collision
   bra test_fireball_bug_collision
 ship_bug_collision:
-  sub.b #10,SHIP_DST+1
+  sub.w #10,player_ship+2
 
 test_fireball_bug_collision:
   btst.l #12,d0
   bne fireball_bug_collision
   bra done_collision
 fireball_bug_collision:
-  move.b #250,FIREBALL_DST+1
+  ;move.w #250,fireball0+2
+  ;move.w #250,fireball0+6
+; TODO(lucasw) this needs to be a double for loop- loop through all
+; fireballs, which loop through all enemies
+  move fireball0,a1
+test_enemy0_collision
+  move enemy0,a2
+  jsr rect_rect_detect
+  cmp.b #$1,d0
+  bne test_enemy1_collision
   add.w #6,enemy0+2  ; x1
   add.w #6,enemy0+6  ; x2
-done_collision:
+  bra done_collision
+test_enemy1_collision
+  move enemy0,a2
+  jsr rect_rect_detect
+  cmp.b #$1,d0
+  bne done_collision
+  add.w #6,enemy1+2  ; x1
+  add.w #6,enemy1+6  ; x2
+  bra done_collision
 
+rect_rect_detect:
+  ; a1 is rect 1 with y1 x1 y2 x2 in sequential words
+  ; a2 is rect 2 similarly laid out
+  ; d0 will be set to 1 if there is overlap
+  move.b #$1,d0
+  rts
+
+  ; can't dow cmp.w 6(a1),2(a2) , the second arg can't be displaced
+  move.w (a2)+,d1
+  move.w (a2)+,d2
+  move.w (a2)+,d3
+  move.w (a2)+,d4
+  cmp.w 6(a1),d1  ; 2(a2)
+  blt.w rect_no_overlap
+  cmp.w 2(a1),d2
+  bgt.w rect_no_overlap
+  cmp.w (a1),d3
+  blt.w rect_no_overlap
+  cmp.w 4(a1),d4
+  bgt.w rect_no_overlap
+  move.b #$1,d0
+  rts
+rect_no_overlap:
+  move.b #$0,d0
+  rts
+;;;;;;;;;;;;;;;;;;;;;;;;
+done_collision:
 test_fireball:
-  move.l #0,d0
-  move.b FIREBALL_DST+1,d0
-  cmp.w #250,d0  ; FIREBALL_DST+1
+  cmp.w #250,fireball0+2
   bge shoot_fireball
 update_fireball:
-  add.b #2,FIREBALL_DST+1
+  add.w #2,fireball0+2
+  add.w #2,fireball0+6
   bra done_fireball
-
 shoot_fireball:
   ; shoot the fireball at the current ship location
   ; mouse/joy button 2
   btst.b #7,CIAAPRA
   bne done_fireball
   ; copy the ship location first
-  move.l (SHIP_DST),(FIREBALL_DST)
-  add.b #2,FIREBALL_DST+1 ; offset the hstart to the front of the ship
-  add.b #12,FIREBALL_DST  ; offset the start position to so fire from middle of ship
-  ; the fireball vstop needs to be reset to vstart then the height of the fireball added
-  move.b FIREBALL_DST,FIREBALL_DST+2  ; VSTOP
-  add.b #8,FIREBALL_DST+2
+  move.l player_ship,fireball0
+  move.l player_ship,fireball0+4
+  ;add.w #2,fireball0+2 ; offset the hstart to the front of the ship
+  add.w #12,fireball0  ; offset the start position to so fire from middle of ship
+  add.w #12,fireball0+4  ; offset the start position to so fire from middle of ship
+  add.w #8,fireball0+4  ; add height of fireball
 done_fireball:
 
 ;move.b frame,d0
@@ -550,12 +602,18 @@ waitVB:
 ;;;;;;;;;;;;;;;;
 ; seems like this should be done during vblank unless re-using sprites
 update_sprite_registers:
+  move.b player_ship+1,SHIP_DST    ; VSTART
+  move.b player_ship+3,SHIP_DST+1  ; HSTART
+  move.b player_ship+5,SHIP_DST+2  ; VSTOP
   move.b enemy0+1,BUG1_DST    ; VSTART
   move.b enemy0+3,BUG1_DST+1  ; HSTART
   move.b enemy0+5,BUG1_DST+2  ; VSTOP
   move.b enemy1+1,BUG2_DST    ; VSTART
   move.b enemy1+3,BUG2_DST+1  ; HSTART
   move.b enemy1+5,BUG2_DST+2  ; VSTOP
+  move.b fireball0+1,FIREBALL0_DST    ; VSTART
+  move.b fireball0+3,FIREBALL0_DST+1  ; HSTART
+  move.b fireball0+5,FIREBALL0_DST+2  ; VSTOP
   ; TODO add the higher bits to SPRxCTL?
 
 skip4:
@@ -603,6 +661,11 @@ frame:
   dc.l 0
   ; storage for 16-bit data
   CNOP 0,4
+; sprite metadata
+player_ship:
+  dc.l 0
+  dc.l 0
+  CNOP 0,4
 enemies:
 enemy0:
   dc.l 0  ; y1,x1
@@ -637,6 +700,14 @@ enemy7:
   dc.l 0
   dc.l 0
   CNOP 0,4
+fireball0:
+  dc.l 0
+  dc.l 0
+  CNOP 0,4
+fireball1:
+  dc.l 0
+  dc.l 0
+  CNOP 0,4
 olddmareq: dc.w 0
 oldintreq: dc.w 0
 oldintena: dc.w 0
@@ -652,6 +723,7 @@ gfxname:
   Section ChipRAM,Data_c
   CNOP 0,4
 
+; Sprite data
 ; TODO(lucasw) is this actually chip ram, and it should go somewhere else and only
 ; be copied to chip ram as needed?
 
