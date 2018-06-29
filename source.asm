@@ -196,7 +196,7 @@ init:
   move.w #$0060,enemy0    ; y1
   move.w #$0090,enemy0+2  ; x1
   move.w #$0070,enemy0+4  ; y2
-  move.w #$0090,enemy0+6  ; x1
+  move.w #$00a0,enemy0+6  ; x1
   ; these glitch the screen up - because using words with non-aligned odd address
   move.b enemy0+1,BUG1_DST    ; VSTART
   move.b enemy0+3,BUG1_DST+1  ; HSTART
@@ -208,10 +208,10 @@ init:
   move.w #16,d0
   jsr copy_data
 
-  move.w #$0030,enemy1    ; y1
+  move.w #$0080,enemy1    ; y1
   move.w #$00a0,enemy1+2  ; x1
-  move.w #$0040,enemy1+4  ; y2
-  move.w #$0060,enemy1+6  ; x1
+  move.w #$0090,enemy1+4  ; y2
+  move.w #$00b0,enemy1+6  ; x1
   ; these glitch the screen up - because using words with non-aligned odd address
   move.b enemy1+1,BUG2_DST    ; VSTART
   move.b enemy1+3,BUG2_DST+1  ; HSTART
@@ -486,17 +486,16 @@ ship_bug_collision:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 test_fireball_bug_collision:
+  bra fireball_bug_collision  ; temp always test for collisions with rect-rect code
   btst.l #12,d0
   bne fireball_bug_collision
   bra done_collision
 fireball_bug_collision:
-  ;move.w #250,fireball0+2
-  ;move.w #250,fireball0+6
 ; TODO(lucasw) this needs to be a double for loop- loop through all
 ; fireballs, which loop through all enemies
   move.l #fireball0,a1
-  ; bra test_enemy1_collision  ; temp disable of enemy0 detection
-test_enemy0_collision:
+test_enemy_collision:
+  move.l #fireball0,a3
   move.l #enemy0,a2
   jsr rect_rect_detect
   ; the lea method is faster than jsr, but maybe can only be used
@@ -504,25 +503,25 @@ test_enemy0_collision:
   ; http://www.easy68k.com/paulrsm/doc/trick68k.htm
   ;lea #test_enemy0_collision_return,a0
   ;jmp rect_rect_detect
-test_enemy0_collision_return:
-  cmp.b #$1,d0
-  bne test_enemy1_collision
-  add.w #6,enemy0+2  ; x1
-  add.w #6,enemy0+6  ; x2
-  bra done_collision
-
-test_enemy1_collision:
-  ;bra done_collision ; temp disable of enemy1 detection
+  jsr test_enemy_collision_return
   move.l #enemy1,a2
   jsr rect_rect_detect
-  ; lea #test_enemy1_collision_return,a0
-  ; jmp rect_rect_detect
-test_enemy1_collision_return:
-  cmp.b #$1,d0
-  bne done_collision
-  add.w #6,enemy1+2  ; x1
-  add.w #6,enemy1+6  ; x2
+  jsr test_enemy_collision_return
   bra done_collision
+
+test_enemy_collision_return:
+  cmp.b #$1,d0
+  bne done_enemy_collision
+  add.w #6,2(a2)  ; x1
+  add.w #6,6(a2)  ; x2
+  ; reset fireball if it hits an enemy
+  ; TODO(lwalter) make a subroutine for this- or is that slower?
+  move.w #250,2(a3)
+  move.w #266,6(a3)
+  move.w #$0,(a3)
+  move.w #$8,4(a3)
+done_enemy_collision:
+  rts
 
 rect_rect_detect:
   ; a0 is return address
@@ -533,24 +532,26 @@ rect_rect_detect:
 
   move.w (a1),d1
   move.w 4(a2),d2
-  ; cmp.w 4(a1),d1  ; fewer instructions
+  ;move.w #5,d1
+  ;move.w #4,d2
+  ; cmp.w 4(a1),d1  ; fewer instructions, TODO(lwalter) do this once it is working
   cmp.w d1,d2
-  bgt rect_no_overlap
+  blt rect_no_overlap
 
   move.w (a2),d1
   move.w 4(a1),d2
   cmp.w d1,d2
-  bgt rect_no_overlap
+  blt rect_no_overlap
 
   move.w 2(a1),d1
   move.w 6(a2),d2
   cmp.w d1,d2
-  bgt rect_no_overlap
+  blt rect_no_overlap
 
   move.w 2(a2),d1
   move.w 6(a1),d2
   cmp.w d1,d2
-  bgt rect_no_overlap
+  blt rect_no_overlap
 
   ; there was an overlap
   move.b #$1,d0
