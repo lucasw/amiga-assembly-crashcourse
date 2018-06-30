@@ -502,11 +502,10 @@ test_fireball_bug_collision:
 fireball_bug_collision:
 ; TODO(lucasw) this needs to be a double for loop- loop through all
 ; fireballs, which loop through all enemies
-  move.l #fireball0,a1
 test_enemy_collision:
 
   ; unrolled loop
-  move.l #fireball0,a3
+  move.l #fireball1,a1
   move.l #enemy0,a2
   jsr rect_rect_detect
   ; the lea method is faster than jsr, but maybe can only be used
@@ -519,7 +518,7 @@ test_enemy_collision:
   jsr rect_rect_detect
   jsr test_enemy_collision_return
 
-  move.l #fireball1,a3
+  move.l #fireball0,a1
   move.l #enemy0,a2
   jsr rect_rect_detect
   jsr test_enemy_collision_return
@@ -537,10 +536,10 @@ test_enemy_collision_return:
   add.w #6,6(a2)  ; x2
   ; reset fireball if it hits an enemy
   ; TODO(lwalter) make a subroutine for this- or is that slower?
-  move.w #$00fa,2(a3)
-  move.w #$010a,6(a3)
-  move.w #$0,(a3)
-  move.w #$8,4(a3)
+  move.w #$00fa,2(a1)
+  move.w #$010a,6(a1)
+  move.w #$0,(a1)
+  move.w #$8,4(a1)
 done_enemy_collision:
   rts
 ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -596,10 +595,9 @@ update_fire:
   move.b d2,old_ciaapra
   not.b d1
   and.b d2,d1
-  ; can't do btst.b on d registers, so instead of btst.b #7 need #31
+  ; can't do btst.b on d registers, so instead of btst.b #7:
   and.b #%10000000,d1
   tst.b d1
-  ;btst #31,d1
   beq update_fireballs
   move.b #1,d0  ; do fire a new fireball
 update_fireballs:
