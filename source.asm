@@ -180,8 +180,8 @@ init:
 
   move.w #$0070,fireball0    ; y1
   move.w #$0078,fireball0+4  ; y2
-  move.w #$0050,fireball0+2  ; x1
-  move.w #$0060,fireball0+6  ; x2
+  move.w #$00f8,fireball0+2  ; x1
+  move.w #$0108,fireball0+6  ; x2
 
   move.l #FIREBALL1_DST,a1
   move.l #fireball_data,a2
@@ -190,8 +190,8 @@ init:
 
   move.w #$0060,fireball1    ; y1
   move.w #$0068,fireball1+4  ; y2
-  move.w #$0060,fireball1+2
-  move.w #$0070,fireball1+6
+  move.w #$00f8,fireball1+2
+  move.w #$0108,fireball1+6
 
   ;;;;;;;;;;;;;;;;;;;
   ; Enemy 0
@@ -240,9 +240,10 @@ skip_copy_data:
 
 main_loop:
   ; increment frame count
-  move.l frame,d1
-  addq.l #1,d1
-  move.l d1,frame
+  addq.l #1,frame
+  ;move.l frame,d1
+  ;addq.l #1,d1
+  ;move.l d1,frame
 
   ; write instructions into copperlist
   ; TODO(lucasw) couldn't this be done once if they aren't changing?
@@ -422,7 +423,7 @@ skip_load_bpl
   ;move.w #0,d1
   ;bra done_keys
   ;move_left:
-  ;  move.w #-1,d1
+  ;  move.w #1,d1
   ;  bra done_keys
   ;move_right:
   ;  move.w #1,d1
@@ -456,7 +457,7 @@ skip_load_bpl
     bne move_left
     bra test_right
     move_left:
-      add.w #-1,d2
+      add.w #1,d2
   test_right:
     btst.l #1,d0
     bne move_right
@@ -676,9 +677,16 @@ done_fireballs:
   ;sub.w #1,enemy0+6  ; x2
 
 update_enemies:
-  ;move.b frame,d0
-  ;and.b #$01,d0
-  ; lsr.w #3,d0
+  move.l #$00000000,d0
+  move.l frame,d1
+  lsr.l #3,d1
+  and.w #$1f,d1
+  and.w #$1,d1
+  move.w d1,d0
+  ;move.l #signed_sin32_15,a0
+  move.l #test_neg,a0
+  move.b (a0,d1),d0
+  ext.w d0  ; sign extend
 
   ; TODO(lwalter) enemy0+8 should be xvel, +10 should be yvel
   sub.w #1,enemy0+2  ; x1
@@ -688,8 +696,8 @@ update_enemies:
 
   sub.w #1,enemy1+2  ; x1
   sub.w #1,enemy1+6  ; x2
-  sub.w #0,enemy1    ; y1
-  sub.w #0,enemy1+4  ; y2
+  add.w #-1,enemy1    ; y1
+  add.w #-1,enemy1+4  ; y2
 
   move.l #enemy0,a0
   jsr test_reset_enemy
@@ -712,16 +720,16 @@ enemy_x_test_done:
 ; TODO(lucasw) don't make this a subroutine if nothing else needs it
 ey_test:
 ey_test_top:
-  cmp.w #$30,(a0)
-  bgt ey_test_bottom
+  cmp.w #$0030,(a0)
+  bgt.w ey_test_bottom
   move.w #$0030,(a0)
-  move.w #$0050,4(a0)
-  jsr new_y_position
+  move.w #$0040,4(a0)
+  bra edone_xy_test
 ey_test_bottom:
   cmp.w #$e0,(a0)
   blt edone_xy_test
-  move.w #$00e0,(a0)
-  move.w #$00f0,4(a0)
+  move.w #$e0,(a0)
+  move.w #$f0,4(a0)
 edone_xy_test
   rts
 
@@ -882,6 +890,16 @@ oldadkcon: dc.w 0
 sin32_15:
   dc.b 8,9,10,12,13,14,14,15,15,15,14,14,13,12,10,9,8,6,5,3,2,1,1,0,0,0,1,1,2,3,5,6
   CNOP 0,4
+signed_sin32_15:
+  dc.b 10,9,9,9,9,8,8,7,7,6,5,4,3,2,1,0,0,0,1,-2,-3,-4,-5,-6,-7,-7,-8,-8,-9,-9,-9,-9
+  CNOP 0,4
+test_neg:
+  dc.b -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
+  CNOP 0,4
+test_pos:
+  dc.b 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+  CNOP 0,4
+
 gfxname:
   dc.b 'graphics.library',0
   Section ChipRAM,Data_c
