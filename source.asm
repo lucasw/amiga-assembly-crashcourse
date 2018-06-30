@@ -44,7 +44,8 @@ BPL7PTL EQU $0fa ; Bit plane 7 pointer (low 15 bits)
 BPL8PTH EQU $0fc ; Bit plane 8 pointer (high 5 bits)
 BPL8PTL EQU $0fe ; Bit plane 8 pointer (low 15 bits)
 
-CIAAPRA    EQU             $bfe001
+; 7-0: /fir1, /fir0, /rdy, /tk0, /wpro/, /chng, /led, ovl
+CIAAPRA EQU $bfe001  ; joystick and mouse buttons
 
 CIAASDR    EQU             $bfec01
 
@@ -589,10 +590,17 @@ done_collision:
 update_fire:
   ; mouse/joy button 2 - TODO(lucasw) capture in interrupt?
   move.b #0,d0  ; don't fire a new fireball
-  btst.b #7,CIAAPRA
-  ; TODO(lucasw) need to detect that button has gone up before
-  ; allowing it to be pressed again
-  bne update_fireballs
+  ; has the joystick button been pressed - rising edge?
+  move.b old_ciaapra,d1
+  move.b CIAAPRA,d2
+  move.b d2,old_ciaapra
+  not.b d1
+  and.b d2,d1
+  ; can't do btst.b on d registers, so instead of btst.b #7 need #31
+  and.b #%10000000,d1
+  tst.b d1
+  ;btst #31,d1
+  beq update_fireballs
   move.b #1,d0  ; do fire a new fireball
 update_fireballs:
   ; copy the ship location first
@@ -740,6 +748,9 @@ gfxbase: dc.l 0
 frame:
   dc.l 0
   ; storage for 16-bit data
+  CNOP 0,4
+old_ciaapra:
+  dc.l 0
   CNOP 0,4
 ; sprite metadata
 player_ship:
