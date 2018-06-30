@@ -483,8 +483,23 @@ ship_update:
   add.w d3,player_ship    ; y
   add.w d3,player_ship+4
 
-  ;;;;;;;;;;;;;;;;;;;;;;;
-  ; collision detection
+  ; limit movement to scrreen
+  ; this only works for slow movement, if movement is fast
+  ; need to test the player position moving changing it
+x_test_left:  ; $48 to $d8
+  cmp.w #$48,player_ship+2
+  bgt x_test_right
+  move.w #$48,player_ship+2
+  move.w #$58,player_ship+6
+x_test_right:
+  cmp.w #$d8,player_ship+2
+  blt y_test_top
+  move.w #$d8,player_ship+2
+  move.w #$e8,player_ship+6
+y_test_top:
+
+;;;;;;;;;;;;;;;;;;;;;;;
+collision_detection:
   move.w CLXDAT,d0
   ; ship bug collision
   btst.l #10,d0
