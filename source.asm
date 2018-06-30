@@ -92,12 +92,17 @@ SPR7PTL EQU $dff13E ; Sprite 7 pointer (low 15 bits)
 COLOR16 EQU $dff1a0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; DMA memory is 0x0 - 0x7FFFF
+; DMA (chip-ram) memory is 0x0 - 0x7FFFF
+; TODO(lucasw) but what about the sky/mountains memory below?
+; can I allocate this below instead of doing this?
+; The regular memory may contain many variations on the ship or bugs,
+; but the real chip memory just needs what needs to be accessed
+; on short notice
 SHIP_DST EQU $25000
-FIREBALL0_DST EQU $25000+fireball_data-ship_data
-FIREBALL1_DST EQU FIREBALL0_DST+fireball_data-ship_data
-BUG1_DST EQU FIREBALL1_DST+sky_data-bug_data
-BUG2_DST EQU BUG1_DST+sky_data-bug_data
+FIREBALL0_DST EQU $25000+end_ship_data-ship_data
+FIREBALL1_DST EQU FIREBALL0_DST+end_fireball_data-fireball_data
+BUG1_DST EQU FIREBALL1_DST+end_fireball_data-fireball_data
+BUG2_DST EQU BUG1_DST+end_bug_data-bug_data
 DUMMY_DST EQU $30000
 
 init:
@@ -568,7 +573,7 @@ test_enemy_collision_return:
   ;move.b frame,(a2)
   ;move.b frame+$10,4(a2)
   ; reset fireball if it hits an enemy
-  ; TODO(lwalter) make a subroutine for this- or is that slower?
+  ; TODO(lucasw) make a subroutine for this- or is that slower?
   move.w #$00fa,2(a1)
   move.w #$010a,6(a1)
   move.w #$0,(a1)
@@ -588,7 +593,7 @@ rect_rect_detect:
   move.w 4(a0),d2
   ;move.w #5,d1
   ;move.w #4,d2
-  ; cmp.w 4(a1),d1  ; fewer instructions, TODO(lwalter) do this once it is working
+  ; cmp.w 4(a1),d1  ; fewer instructions, TODO(lucasw) do this once it is working
   cmp.w d1,d2
   blt rect_no_overlap
 
@@ -615,7 +620,7 @@ rect_no_overlap:
   move.b #$0,d0
   rts
   ;jmp (a0)
-;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 done_collision:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -687,7 +692,7 @@ update_enemies:
   move.b (a0,d1),d0
   ext.w d0  ; sign extend
 
-  ; TODO(lwalter) enemy0+8 should be xvel, +10 should be yvel
+  ; TODO(lucasw) enemy0+8 should be xvel, +10 should be yvel
   sub.w #1,enemy0+2  ; x1
   sub.w #1,enemy0+6  ; x2
   add.w d0,enemy0    ; y1
@@ -740,7 +745,7 @@ new_y_position:
   rts
 done_update_enemies:
 
-  ; TODO(lwalter) need to reposition the sprites at right of screen,
+  ; TODO(lucasw) need to reposition the sprites at right of screen,
   ; they can wrap around visually but the rect rect collision will fail because the high
   ; order bits aren't colliding.
 
@@ -901,11 +906,6 @@ test_pos:
   dc.b 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
   CNOP 0,4
 
-gfxname:
-  dc.b 'graphics.library',0
-  Section ChipRAM,Data_c
-  CNOP 0,4
-
 ; Sprite data
 ; TODO(lucasw) is this actually chip ram, and it should go somewhere else and only
 ; be copied to chip ram as needed?
@@ -918,10 +918,12 @@ ship_data:
   dc.w    $7060,$9000             ;VSTART, HSTART, VSTOP
   incbin "gimp/ship.data.raw"
   CNOP 4,4             ; End of sprite data
+end_ship_data:
 fireball_data:
   dc.w    $00ff,$1000             ;VSTART, HSTART, VSTOP
   incbin "gimp/fireball.data.raw"
   CNOP 4,4             ; End of sprite data
+end_fireball_data:
 bug_data:
   ; 0x48 is far left (with no pixels off screen to left
   ; 0xd8 seems to be almost the end of the screen- is hstart added to another number
@@ -929,7 +931,21 @@ bug_data:
   dc.w    $40d8,$5000             ;VSTART, HSTART, VSTOP
   incbin "gimp/bug.data.raw"
   CNOP 4,4             ; End of sprite data
-sky_data:
+end_bug_data:
+end_sprites:
+
+; TODO(lucasw) all data after this chip ram, and what is above is allocated elsewhere?
+; so anything below this can be used by the copper list, but the stuff above
+; needs to be copied into chip ram by the program.
+; Maybe should allocate a big section here instead of using 25000 above
+; 0 - 0x7FFFF
+gfxname:
+  dc.b 'graphics.library',0
+  Section ChipRAM,Data_c
+  CNOP 0,4
+
+; TODO(lucasw) make slots for all the sprites that need to be used live
+sky_data:  ; TODO(lucasw) what address is this actually?
   incbin "gimp/sky.data.raw"
   ; datalists aligned to 32-bit
   CNOP 0,4
