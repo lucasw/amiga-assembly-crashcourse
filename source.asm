@@ -88,6 +88,7 @@ SPR6PTL EQU $dff13A ; Sprite 6 pointer (low 15 bits)
 SPR7PTH EQU $dff13C ; Sprite 7 pointer (high 5 bits)
 SPR7PTL EQU $dff13E ; Sprite 7 pointer (low 15 bits)
 
+COLOR16 EQU $dff1a0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; DMA memory is 0x0 - 0x7FFFF
@@ -167,22 +168,29 @@ init:
   jsr copy_data
 
   move.w #$0080,player_ship    ; y1
-  move.w #$0050,player_ship+2  ; x1
   move.w #$00a0,player_ship+4  ; y2
-  move.w #$0060,player_ship+6  ; x1
+  move.w #$0050,player_ship+2  ; x1
+  move.w #$0060,player_ship+6  ; x2
 
   move.l #FIREBALL0_DST,a1
   move.l #fireball_data,a2
   move.w #8,d0
   jsr copy_data
+
+  move.w #$0070,fireball0    ; y1
+  move.w #$0078,fireball0+4  ; y2
+  move.w #$0050,fireball0+2  ; x1
+  move.w #$0060,fireball0+6  ; x2
+
   move.l #FIREBALL1_DST,a1
   move.l #fireball_data,a2
   move.w #8,d0
+  jsr copy_data
 
-  move.w #250,fireball0+2
-  move.w #250,fireball0+6
-  move.w #250,fireball1+2
-  move.w #250,fireball1+6
+  move.w #$0060,fireball1    ; y1
+  move.w #$0068,fireball1+4  ; y2
+  move.w #$0060,fireball1+2
+  move.w #$0070,fireball1+6
 
   ;;;;;;;;;;;;;;;;;;;
   ; Enemy 0
@@ -563,26 +571,50 @@ rect_no_overlap:
   ;jmp (a0)
 ;;;;;;;;;;;;;;;;;;;;;;;;
 done_collision:
+
+  bra done_fireballs  ; temp disable
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+update_fire:
+  ; mouse/joy button 2 - TODO(lucasw) capture in interrupt?
+  move.w #$0fff,COLOR16
+  btst.b #7,CIAAPRA
+  move.b #1,d0  ; don't fire a new fireball
+  bne update_fireballs
+  move.b #1,d0  ; do fire a new fireball
+update_fireballs:
+  ; copy the ship location first
+  move.l fireball0,a0
+  jsr test_fireball
+  ;move.l fireball1,a0
+  ;jsr test_fireball
+  bra done_fireballs
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; subroutine launch/update fireball
 test_fireball:
-  cmp.w #250,fireball0+2
-  bge shoot_fireball
-update_fireball:
-  add.w #2,fireball0+2
-  add.w #2,fireball0+6
-  bra done_fireball
+  cmp.w #250,2(a0)
+  bge test_shoot_fireball
+move_fireball:
+  add.w #2,2(a0)
+  add.w #2,6(a0)
+  bra done_shoot_fireball
+test_shoot_fireball:
+  cmp.b #1,d0
+  beq shoot_fireball
+  bra done_shoot_fireball
 shoot_fireball:
   ; shoot the fireball at the current ship location
-  ; mouse/joy button 2
-  btst.b #7,CIAAPRA
-  bne done_fireball
-  ; copy the ship location first
-  move.l player_ship,fireball0
-  move.l player_ship,fireball0+4
+  move.b #0,d0
+  move.l player_ship,(a0)
+  move.l player_ship,4(a0)
   ;add.w #2,fireball0+2 ; offset the hstart to the front of the ship
-  add.w #12,fireball0  ; offset the start position to so fire from middle of ship
-  add.w #12,fireball0+4  ; offset the start position to so fire from middle of ship
-  add.w #8,fireball0+4  ; add height of fireball
-done_fireball:
+  add.w #12,a0  ; offset the start position to so fire from middle of ship
+  add.w #12,4(a0)  ; offset the start position to so fire from middle of ship
+  add.w #8,4(a0)  ; add height of fireball
+done_shoot_fireball:
+  rts
+; end launch/update fireball subroutine
+done_fireballs:
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;move.b frame,d0
   ;and.b #$01,d0
@@ -647,6 +679,9 @@ update_sprite_registers:
   move.b fireball0+1,FIREBALL0_DST    ; VSTART
   move.b fireball0+3,FIREBALL0_DST+1  ; HSTART
   move.b fireball0+5,FIREBALL0_DST+2  ; VSTOP
+  move.b fireball1+1,FIREBALL1_DST    ; VSTART
+  move.b fireball1+3,FIREBALL1_DST+1  ; HSTART
+  move.b fireball1+5,FIREBALL1_DST+2  ; VSTOP
   ; TODO add the higher bits to SPRxCTL?
 
 skip4:
