@@ -497,6 +497,16 @@ x_test_right:
   move.w #$d8,player_ship+2
   move.w #$e8,player_ship+6
 y_test_top:
+  cmp.w #$30,player_ship
+  bgt y_test_bottom
+  move.w #$30,player_ship
+  move.w #$50,player_ship+4
+y_test_bottom:
+  cmp.w #$d0,player_ship
+  blt done_xy_test
+  move.w #$d0,player_ship
+  move.w #$f0,player_ship+4
+done_xy_test:
 
 ;;;;;;;;;;;;;;;;;;;;;;;
 collision_detection:
