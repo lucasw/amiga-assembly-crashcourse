@@ -457,7 +457,7 @@ skip_load_bpl
     bne move_left
     bra test_right
     move_left:
-      add.w #1,d2
+      add.w #-1,d2
   test_right:
     btst.l #1,d0
     bne move_right
@@ -679,25 +679,24 @@ done_fireballs:
 update_enemies:
   move.l #$00000000,d0
   move.l frame,d1
-  lsr.l #3,d1
+  lsr.l #1,d1
   and.w #$1f,d1
-  and.w #$1,d1
   move.w d1,d0
-  ;move.l #signed_sin32_15,a0
-  move.l #test_neg,a0
+  move.l #signed_sin32_15,a0
+  ;move.l #test_wave,a0
   move.b (a0,d1),d0
   ext.w d0  ; sign extend
 
   ; TODO(lwalter) enemy0+8 should be xvel, +10 should be yvel
   sub.w #1,enemy0+2  ; x1
   sub.w #1,enemy0+6  ; x2
-  add.w #0,enemy0    ; y1
-  add.w #0,enemy0+4  ; y2
+  add.w d0,enemy0    ; y1
+  add.w d0,enemy0+4  ; y2
 
   sub.w #1,enemy1+2  ; x1
   sub.w #1,enemy1+6  ; x2
-  add.w #-1,enemy1    ; y1
-  add.w #-1,enemy1+4  ; y2
+  add.w d0,enemy1    ; y1
+  add.w d0,enemy1+4  ; y2
 
   move.l #enemy0,a0
   jsr test_reset_enemy
@@ -893,6 +892,8 @@ sin32_15:
 signed_sin32_15:
   dc.b 10,9,9,9,9,8,8,7,7,6,5,4,3,2,1,0,0,0,1,-2,-3,-4,-5,-6,-7,-7,-8,-8,-9,-9,-9,-9
   CNOP 0,4
+test_wave:
+  dc.b 4,-3,-2,-1,0,0,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,0,1,1,2,3,4,4
 test_neg:
   dc.b -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
   CNOP 0,4
