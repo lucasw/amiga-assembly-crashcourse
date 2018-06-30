@@ -517,6 +517,7 @@ test_enemy_collision:
   jsr test_enemy_collision_return
   bra done_collision
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 test_enemy_collision_return:
   cmp.b #$1,d0
   bne done_enemy_collision
@@ -524,12 +525,13 @@ test_enemy_collision_return:
   add.w #6,6(a2)  ; x2
   ; reset fireball if it hits an enemy
   ; TODO(lwalter) make a subroutine for this- or is that slower?
-  move.w #250,2(a3)
-  move.w #266,6(a3)
+  move.w #$00fa,2(a3)
+  move.w #$010a,6(a3)
   move.w #$0,(a3)
   move.w #$8,4(a3)
 done_enemy_collision:
   rts
+;;;;;;;;;;;;;;;;;;;;;;;;;
 
 rect_rect_detect:
   ; a0 is return address
@@ -572,45 +574,44 @@ rect_no_overlap:
 ;;;;;;;;;;;;;;;;;;;;;;;;
 done_collision:
 
-  bra done_fireballs  ; temp disable
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 update_fire:
   ; mouse/joy button 2 - TODO(lucasw) capture in interrupt?
-  move.w #$0fff,COLOR16
+  move.b #0,d0  ; don't fire a new fireball
   btst.b #7,CIAAPRA
-  move.b #1,d0  ; don't fire a new fireball
+  ; TODO(lucasw) need to detect that button has gone up before
+  ; allowing it to be pressed again
   bne update_fireballs
   move.b #1,d0  ; do fire a new fireball
 update_fireballs:
   ; copy the ship location first
-  move.l fireball0,a0
+  move.l #fireball0,a0
   jsr test_fireball
-  ;move.l fireball1,a0
-  ;jsr test_fireball
+  move.l #fireball1,a0
+  jsr test_fireball
   bra done_fireballs
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; subroutine launch/update fireball
 test_fireball:
-  cmp.w #250,2(a0)
+  cmp.w #$00fa,2(a0)
   bge test_shoot_fireball
 move_fireball:
   add.w #2,2(a0)
   add.w #2,6(a0)
-  bra done_shoot_fireball
+  rts
 test_shoot_fireball:
   cmp.b #1,d0
-  beq shoot_fireball
-  bra done_shoot_fireball
+  bne done_test_fireball
 shoot_fireball:
   ; shoot the fireball at the current ship location
   move.b #0,d0
   move.l player_ship,(a0)
   move.l player_ship,4(a0)
   ;add.w #2,fireball0+2 ; offset the hstart to the front of the ship
-  add.w #12,a0  ; offset the start position to so fire from middle of ship
+  add.w #12,(a0)  ; offset the start position to so fire from middle of ship
   add.w #12,4(a0)  ; offset the start position to so fire from middle of ship
   add.w #8,4(a0)  ; add height of fireball
-done_shoot_fireball:
+done_test_fireball:
   rts
 ; end launch/update fireball subroutine
 done_fireballs:
