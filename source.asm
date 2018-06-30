@@ -503,6 +503,8 @@ fireball_bug_collision:
 ; fireballs, which loop through all enemies
   move.l #fireball0,a1
 test_enemy_collision:
+
+  ; unrolled loop
   move.l #fireball0,a3
   move.l #enemy0,a2
   jsr rect_rect_detect
@@ -515,6 +517,15 @@ test_enemy_collision:
   move.l #enemy1,a2
   jsr rect_rect_detect
   jsr test_enemy_collision_return
+
+  move.l #fireball1,a3
+  move.l #enemy0,a2
+  jsr rect_rect_detect
+  jsr test_enemy_collision_return
+  move.l #enemy1,a2
+  jsr rect_rect_detect
+  jsr test_enemy_collision_return
+
   bra done_collision
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
