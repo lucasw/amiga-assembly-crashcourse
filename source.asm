@@ -468,16 +468,16 @@ skip_load_bpl
     bne move_up
     bra test_down
     move_up:
-      add.w #-$1,d3
+      add.w #-$2,d3
   test_down:
     btst.l #1,d1
     bne move_down
     bra done_joy
     move_down:
-      add.w #$1,d3
+      add.w #$2,d3
   done_joy:
 
-ship_update:
+update_ship:
   add.w d2,player_ship+2  ; x
   add.w d2,player_ship+6
   add.w d3,player_ship    ; y
@@ -516,7 +516,9 @@ collision_detection:
   bne ship_bug_collision
   bra test_fireball_bug_collision
 ship_bug_collision:
-  sub.w #10,player_ship+2
+  ; sub.w #10,player_ship+2
+  move.w #$48,player_ship+2
+  move.w #$58,player_ship+6
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 test_fireball_bug_collision:
@@ -531,7 +533,7 @@ test_enemy_collision:
 
   ; unrolled loop
   move.l #fireball1,a1
-  move.l #enemy0,a2
+  move.l #enemy0,a0
   jsr rect_rect_detect
   ; the lea method is faster than jsr, but maybe can only be used
   ; from near enough code?
@@ -539,15 +541,15 @@ test_enemy_collision:
   ;lea #test_enemy0_collision_return,a0
   ;jmp rect_rect_detect
   jsr test_enemy_collision_return
-  move.l #enemy1,a2
+  move.l #enemy1,a0
   jsr rect_rect_detect
   jsr test_enemy_collision_return
 
   move.l #fireball0,a1
-  move.l #enemy0,a2
+  move.l #enemy0,a0
   jsr rect_rect_detect
   jsr test_enemy_collision_return
-  move.l #enemy1,a2
+  move.l #enemy1,a0
   jsr rect_rect_detect
   jsr test_enemy_collision_return
 
@@ -555,10 +557,15 @@ test_enemy_collision:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 test_enemy_collision_return:
+  ; a0 the enemy
+  ; a1 the fireball
   cmp.b #$1,d0
   bne done_enemy_collision
-  add.w #6,2(a2)  ; x1
-  add.w #6,6(a2)  ; x2
+  move.w #$100,2(a0)  ; x1
+  move.w #$110,6(a0)  ; x2
+  jsr new_y_position
+  ;move.b frame,(a2)
+  ;move.b frame+$10,4(a2)
   ; reset fireball if it hits an enemy
   ; TODO(lwalter) make a subroutine for this- or is that slower?
   move.w #$00fa,2(a1)
@@ -570,31 +577,31 @@ done_enemy_collision:
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 rect_rect_detect:
-  ; a0 is return address
-  ; a1 is rect 1 with y1 x1 y2 x2 in sequential words
-  ; a2 is rect 2 similarly laid out
+  ; ~~a0 is return address~~
+  ; a0 is rect 1 with y1 x1 y2 x2 in sequential words
+  ; a1 is rect 2 with y1 x1 y2 x2 in sequential words
   ; d0 will be set to 1 if there is overlap
   ; can't dow cmp.w 6(a1),2(a2) , the second arg can't be displaced
 
   move.w (a1),d1
-  move.w 4(a2),d2
+  move.w 4(a0),d2
   ;move.w #5,d1
   ;move.w #4,d2
   ; cmp.w 4(a1),d1  ; fewer instructions, TODO(lwalter) do this once it is working
   cmp.w d1,d2
   blt rect_no_overlap
 
-  move.w (a2),d1
+  move.w (a0),d1
   move.w 4(a1),d2
   cmp.w d1,d2
   blt rect_no_overlap
 
   move.w 2(a1),d1
-  move.w 6(a2),d2
+  move.w 6(a0),d2
   cmp.w d1,d2
   blt rect_no_overlap
 
-  move.w 2(a2),d1
+  move.w 2(a0),d1
   move.w 6(a1),d2
   cmp.w d1,d2
   blt rect_no_overlap
@@ -674,15 +681,58 @@ update_enemies:
   ; lsr.w #3,d0
 
   ; TODO(lwalter) enemy0+8 should be xvel, +10 should be yvel
+  sub.w #1,enemy0+2  ; x1
+  sub.w #1,enemy0+6  ; x2
   add.w #0,enemy0    ; y1
-  sub.w #0,enemy0+2  ; x1
   add.w #0,enemy0+4  ; y2
-  sub.w #0,enemy0+6  ; x2
 
+  sub.w #1,enemy1+2  ; x1
+  sub.w #1,enemy1+6  ; x2
   sub.w #0,enemy1    ; y1
-  sub.w #0,enemy1+2  ; x1
   sub.w #0,enemy1+4  ; y2
-  sub.w #0,enemy1+6  ; x2
+
+  move.l #enemy0,a0
+  jsr test_reset_enemy
+  move.l #enemy1,a0
+  jsr test_reset_enemy
+
+  bra done_update_enemies
+test_reset_enemy:  ; $48 to $d8
+  cmp.w #$0038,2(a0)
+  bgt enemy_x_test_done
+  move.w #$00f8,2(a0)
+  move.w #$0108,6(a0)
+  ; TODO(lucasw) respawn somewhere random in y
+  ;move.w frame,d0
+  ;and.w #$3f,d0
+enemy_x_test_done:
+  jsr ey_test
+  rts
+
+; TODO(lucasw) don't make this a subroutine if nothing else needs it
+ey_test:
+ey_test_top:
+  cmp.w #$30,(a0)
+  bgt ey_test_bottom
+  move.w #$0030,(a0)
+  move.w #$0050,4(a0)
+  jsr new_y_position
+ey_test_bottom:
+  cmp.w #$e0,(a0)
+  blt edone_xy_test
+  move.w #$00e0,(a0)
+  move.w #$00f0,4(a0)
+edone_xy_test
+  rts
+
+new_y_position:
+  add.w #$43,(a0)
+  and.w #$ff,(a0)
+  move.w (a0),4(a0)
+  add.w #$10,4(a0)
+  rts
+done_update_enemies:
+
   ; TODO(lwalter) need to reposition the sprites at right of screen,
   ; they can wrap around visually but the rect rect collision will fail because the high
   ; order bits aren't colliding.
