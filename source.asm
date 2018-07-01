@@ -710,7 +710,10 @@ shoot_fireball:
   ; move.w #%111111,AUD0VOL
   ; move.w #$20,AUD0VOL
   move.w #60,AUD0VOL
-  move.w #$8000+$200+1,DMACON  ; DMA set ON - TODO(lucasw) doesn't the $200 turn all dma on?
+  move.w #1,audio0   ; stop whatever is playing
+  move.w #1,audio0+2 ; start this next
+  move.w #100,audio0+4   ; play this for this long
+  ; move.w #$8000+$200+1,DMACON  ; DMA set ON - TODO(lucasw) doesn't the $200 turn all dma on?
 
 done_test_fireball:
   rts
@@ -812,6 +815,29 @@ done_update_enemies:
   ; TODO(lucasw) need to reposition the sprites at right of screen,
   ; they can wrap around visually but the rect rect collision will fail because the high
   ; order bits aren't colliding.
+
+update_audio:
+update_audio0:
+  cmp.w #0,audio0
+  ; if audio0 goes negative then that will end the counting
+  beq audio0_off
+  blt.w dec_audio0_off
+  cmp.w #0,audio0+2
+  beq audio0_on
+  blt.w dec_audio0_on
+audio0_off:
+  move.w #$0001,DMACON     ; DMA audio OFF
+dec_audio0_off:
+  sub.w #1,audio0+2
+  bra done_update_audio0
+audio0_on:
+  move.w #$8001,DMACON
+dec_audio0_on:
+  sub.w #1,audio0
+  move.w audio0+4,audio0+2  ; queue up the next play if any
+  move.w #-1,audio0+4  ; don't play again the next time
+  bra done_update_audio0
+done_update_audio0:
 
 mouse_test:
   ; if mousebutton/joystick 1 or 2 pressed then exit
@@ -977,6 +1003,13 @@ test_neg:
   CNOP 0,4
 test_pos:
   dc.b 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+  CNOP 0,4
+
+; audio control
+audio0:
+  dc.w -1  ; count down to stop playing this channel
+  dc.w -1  ; count down to start playing the channel (count down above first)
+  dc.w -1  ; count down to stop playing this channel
   CNOP 0,4
 
 ; Sprite data
