@@ -99,11 +99,11 @@ COLOR16 EQU $dff1a0
 ; but the real chip memory just needs what needs to be accessed
 ; on short notice
 SHIP_DST EQU $25000
-FIREBALL0_DST EQU $25000+end_ship_data-ship_data
+FIREBALL0_DST EQU SHIP_DST+end_ship_data-ship_data
 FIREBALL1_DST EQU FIREBALL0_DST+end_fireball_data-fireball_data
 BUG1_DST EQU FIREBALL1_DST+end_fireball_data-fireball_data
 BUG2_DST EQU BUG1_DST+end_bug_data-bug_data
-DUMMY_DST EQU $30000
+DUMMY_DST EQU BUG2_DST+end_bug_data-bug_data
 
 init:
   ; store data in hardwareregisters ORed with $8000
@@ -207,10 +207,11 @@ init:
 
   ; position the bug
   ; works
-  move.w #$0060,enemy0    ; y1
   move.w #$0090,enemy0+2  ; x1
+  move.w #$00a0,enemy0+6  ; x2
+  move.w #$0060,enemy0    ; y1
   move.w #$0070,enemy0+4  ; y2
-  move.w #$00a0,enemy0+6  ; x1
+  move.w #$0003,enemy0+8  ; counter
   ; these glitch the screen up - because using words with non-aligned odd address
   move.b enemy0+1,BUG1_DST    ; VSTART
   move.b enemy0+3,BUG1_DST+1  ; HSTART
@@ -222,10 +223,10 @@ init:
   move.w #16,d0
   jsr copy_data
 
-  move.w #$0080,enemy1    ; y1
   move.w #$00a0,enemy1+2  ; x1
+  move.w #$00b0,enemy1+6  ; x2
+  move.w #$0080,enemy1    ; y1
   move.w #$0090,enemy1+4  ; y2
-  move.w #$00b0,enemy1+6  ; x1
   ; these glitch the screen up - because using words with non-aligned odd address
   move.b enemy1+1,BUG2_DST    ; VSTART
   move.b enemy1+3,BUG2_DST+1  ; HSTART
@@ -682,26 +683,44 @@ done_fireballs:
   ;sub.w #1,enemy0+6  ; x2
 
 update_enemies:
-  move.l #$00000000,d0
-  move.l frame,d1
-  lsr.l #1,d1
-  and.w #$1f,d1
-  move.w d1,d0
-  move.l #signed_sin32_15,a0
-  ;move.l #test_wave,a0
-  move.b (a0,d1),d0
-  ext.w d0  ; sign extend
 
   ; TODO(lucasw) enemy0+8 should be xvel, +10 should be yvel
   sub.w #1,enemy0+2  ; x1
   sub.w #1,enemy0+6  ; x2
-  add.w d0,enemy0    ; y1
-  add.w d0,enemy0+4  ; y2
 
   sub.w #1,enemy1+2  ; x1
   sub.w #1,enemy1+6  ; x2
+
+init_enemy_y_movement:
+  ; update y infrequently
+  move.l frame,d1
+  and.l #$3,d1
+  cmp.l #$3,d1
+  bne update_enemy_y_movement
+  add.b #1,enemy0+8  ; enemy counter
+  add.b #1,enemy1+8  ; enemy counter
+update_enemy_y_movement:
+  move.l #signed_sin32_15,a0
+  ; TODO(lucasw) subroutine
+  move.l #$00000000,d1
+  move.b enemy0+8,d1
+  ext.w d1
+  and.w #$1f,d1
+  move.l #$00000000,d0
+  move.w d1,d0
+  move.b (a0,d1),d0
+  ext.w d0  ; sign extend
+  add.w d0,enemy0    ; y1
+  add.w d0,enemy0+4  ; y2
+
+  move.b enemy1+8,d1
+  ext.w d1
+  and.w #$1f,d1
+  move.b (a0,d1),d0
+  ext.w d0  ; sign extend
   add.w d0,enemy1    ; y1
   add.w d0,enemy1+4  ; y2
+end_enemy_y_movement:
 
   move.l #enemy0,a0
   jsr test_reset_enemy
@@ -829,7 +848,10 @@ exit:
   CNOP 0,4
 oldview: dc.l 0
 oldcopper: dc.l 0
-gfxbase: dc.l 0
+olddmareq: dc.w 0
+oldintreq: dc.w 0
+oldintena: dc.w 0
+oldadkcon: dc.w 0
 frame:
   dc.l 0
   ; storage for 16-bit data
@@ -846,48 +868,54 @@ enemies:
 enemy0:
   dc.l 0  ; y1,x1
   dc.l 0  ; y2,x2
+  dc.l 0  ; counter (1st byte), TODO(lucasw) status bits, hit points?
   ; TBD health, trajectory, type, status (including whether enabled or not)
   CNOP 0,4
 enemy1:
+  dc.l 0
   dc.l 0
   dc.l 0
   CNOP 0,4
 enemy2:
   dc.l 0
   dc.l 0
+  dc.l 0
   CNOP 0,4
 enemy3:
+  dc.l 0
   dc.l 0
   dc.l 0
   CNOP 0,4
 enemy4:
   dc.l 0
   dc.l 0
+  dc.l 0
   CNOP 0,4
 enemy5:
+  dc.l 0
   dc.l 0
   dc.l 0
   CNOP 0,4
 enemy6:
   dc.l 0
   dc.l 0
+  dc.l 0
   CNOP 0,4
 enemy7:
+  dc.l 0
   dc.l 0
   dc.l 0
   CNOP 0,4
 fireball0:
   dc.l 0
   dc.l 0
+  dc.l 0
   CNOP 0,4
 fireball1:
   dc.l 0
   dc.l 0
+  dc.l 0
   CNOP 0,4
-olddmareq: dc.w 0
-oldintreq: dc.w 0
-oldintena: dc.w 0
-oldadkcon: dc.w 0
 
 ; storage for 8-bit data
   CNOP 0,4
@@ -895,7 +923,7 @@ sin32_15:
   dc.b 8,9,10,12,13,14,14,15,15,15,14,14,13,12,10,9,8,6,5,3,2,1,1,0,0,0,1,1,2,3,5,6
   CNOP 0,4
 signed_sin32_15:
-  dc.b 10,9,9,9,9,8,8,7,7,6,5,4,3,2,1,0,0,0,1,-2,-3,-4,-5,-6,-7,-7,-8,-8,-9,-9,-9,-9
+  dc.b 3,2,2,2,2,1,1,0,0,0,-1,-1,-2,-2,-2,-2,-3,-2,-2,-2,-2,-1,-1,0,0,0,1,1,2,2,2,2
   CNOP 0,4
 test_wave:
   dc.b 4,-3,-2,-1,0,0,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,0,1,1,2,3,4,4
@@ -939,6 +967,7 @@ end_sprites:
 ; needs to be copied into chip ram by the program.
 ; Maybe should allocate a big section here instead of using 25000 above
 ; 0 - 0x7FFFF
+gfxbase: dc.l 0 ; TODO(lucasw) moved this from other misc register above, does it matter?
 gfxname:
   dc.b 'graphics.library',0
   Section ChipRAM,Data_c
