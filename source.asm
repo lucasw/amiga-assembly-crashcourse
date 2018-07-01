@@ -5,6 +5,29 @@ ADKCONR    EQU    $dff010
 INTENAR    EQU    $dff01c
 INTREQR    EQU    $dff01e
 
+; DMACON
+;15  SET/CLR Set/Clear control bit. Determines if bits
+;written with a 1 get set or cleared
+;Bits written with a zero are unchanged
+;14  BBUSY Blitter busy status bit (read only)
+;13  BZERO Blitter logic zero status bit (read only)
+;12  X
+;11  X
+;10  BLTPRI  Blitter DMA priority (over CPU micro)
+;(also called "blitter nasty")
+;(disables /BLS pin, preventing micro
+;from stealing any bus cycles while
+;blitter DMA is running)
+;09  DMAEN Enable all DMA below (also UHRES DMA)
+;08  BPLEN Bit plane DMA enable
+;07  COPEN Coprocessor DMA enable
+;06  BLTEN Blitter DMA enable
+;05  SPREN Sprite DMA enable
+;04  DSKEN Disk DMA enable
+;03  AUD3EN  Audio channel 3 DMA enable
+;02  AUD2EN  Audio channel 2 DMA enable
+;01  AUD1EN  Audio channel 1 DMA enable
+;00  AUD0EN  Audio channel 0 DMA enable
 DMACON    EQU    $dff096
 ADKCON    EQU    $dff09e
 INTENA    EQU    $dff09a
@@ -680,6 +703,15 @@ shoot_fireball:
   add.w #12,4(a0)  ; offset the start position to so fire from middle of ship
   add.w #8,4(a0)  ; add height of fireball
   ; play shoot sound
+  move.l #shoot_audio_data,AUD0LCH
+  move.w #end_shoot_audio_data-shoot_audio_data,AUD0LEN
+  ; move.w #4986,AUD0LEN
+  move.w #447,AUD0PER
+  ; move.w #%111111,AUD0VOL
+  ; move.w #$20,AUD0VOL
+  move.w #60,AUD0VOL
+  move.w #$8000+$200+1,DMACON  ; DMA set ON - TODO(lucasw) doesn't the $200 turn all dma on?
+
 done_test_fireball:
   rts
 ; end launch/update fireball subroutine
@@ -997,11 +1029,11 @@ mountains_data:
   CNOP 0,4
 
 sound_effects:
-shoot_data:
+shoot_audio_data:
   ;dc.w    $00ff,$1000             ;VSTART, HSTART, VSTOP
   incbin "sound/shoot.wav.raw"
   CNOP 4,4             ; End of sprite data
-end_shoot_data:
+end_shoot_audio_data:
 
 copper_list:
   dc.l $ffffffe ; end of copper list
