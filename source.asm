@@ -10,6 +10,18 @@ ADKCON    EQU    $dff09e
 INTENA    EQU    $dff09a
 INTREQ    EQU    $dff09c
 
+; audio
+AUD0LCH  EQU $dff0a0
+AUD0LCL  EQU $dff0a2
+AUD0LEN  EQU $dff0a4
+AUD0PER  EQU $dff0a6  ; 124 -> 28.86 KHz, 447 -> 8 KHz
+AUD0VOL  EQU $dff0a8
+AUD0DAT  EQU $dff0aa
+
+AUD1DAT  EQU $dff0ba
+AUD2DAT  EQU $dff0ca
+AUD3DAT  EQU $dff0da
+
 CLXCON   EQU  $dff098  ; collision control
 CLXCON2  EQU  $dff10e  ; collision control
 CLXDAT   EQU  $dff00e  ; collision detection
@@ -667,6 +679,7 @@ shoot_fireball:
   add.w #12,(a0)  ; offset the start position to so fire from middle of ship
   add.w #12,4(a0)  ; offset the start position to so fire from middle of ship
   add.w #8,4(a0)  ; add height of fireball
+  ; play shoot sound
 done_test_fireball:
   rts
 ; end launch/update fireball subroutine
@@ -982,6 +995,13 @@ mountains_data:
   incbin "gimp/mountains.data.raw"
   ; datalists aligned to 32-bit
   CNOP 0,4
+
+sound_effects:
+shoot_data:
+  ;dc.w    $00ff,$1000             ;VSTART, HSTART, VSTOP
+  incbin "sound/shoot.wav.raw"
+  CNOP 4,4             ; End of sprite data
+end_shoot_data:
 
 copper_list:
   dc.l $ffffffe ; end of copper list
