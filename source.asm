@@ -134,9 +134,13 @@ COLOR16 EQU $dff1a0
 ; but the real chip memory just needs what needs to be accessed
 ; on short notice
 SHIP_DST EQU $25000
-FIREBALL0_DST EQU SHIP_DST+end_ship_data-ship_data
-FIREBALL1_DST EQU FIREBALL0_DST+end_fireball_data-fireball_data
-BUG1_DST EQU FIREBALL1_DST+end_fireball_data-fireball_data
+FIREBALL0A_DST EQU SHIP_DST+end_ship_data-ship_data
+FIREBALL0B_DST EQU FIREBALL0A_DST+end_ship_data-ship_data
+FIREBALL0C_DST EQU FIREBALL0B_DST+end_ship_data-ship_data
+FIREBALL1A_DST EQU FIREBALL0C_DST+end_fireball_data-fireball_data
+FIREBALL1B_DST EQU FIREBALL1A_DST+end_fireball_data-fireball_data
+FIREBALL1C_DST EQU FIREBALL1B_DST+end_fireball_data-fireball_data
+BUG1_DST EQU FIREBALL1C_DST+end_fireball_data-fireball_data
 BUG2_DST EQU BUG1_DST+end_bug_data-bug_data
 DUMMY_DST EQU BUG2_DST+end_bug_data-bug_data
 
@@ -213,8 +217,18 @@ init:
   move.w #$0050,player_ship+2  ; x1
   move.w #$0060,player_ship+6  ; x2
 
-  move.l #FIREBALL0_DST,a1
+  move.l #FIREBALL0A_DST,a1
   move.l #fireball_data,a2
+  move.w #8,d0
+  jsr copy_data
+
+  move.l #FIREBALL0B_DST,a1
+  move.l #fireball_data,a2
+  move.w #8,d0
+  jsr copy_data
+
+  move.l #FIREBALL0C_DST,a1
+  move.l #fireballc_data,a2
   move.w #8,d0
   jsr copy_data
 
@@ -222,9 +236,23 @@ init:
   move.w #$0078,fireball0+4  ; y2
   move.w #$00f8,fireball0+2  ; x1
   move.w #$0108,fireball0+6  ; x2
+  move.w #$0000,fireball0+8  ; counter
+  move.l #FIREBALL0A_DST,fireball0+12  ; memory address
+  move.l #FIREBALL0B_DST,fireball0+16  ; memory address
+  move.l #FIREBALL0C_DST,fireball0+20  ; memory address
 
-  move.l #FIREBALL1_DST,a1
+  move.l #FIREBALL1A_DST,a1
   move.l #fireball_data,a2
+  move.w #8,d0
+  jsr copy_data
+
+  move.l #FIREBALL1B_DST,a1
+  move.l #fireballb_data,a2
+  move.w #8,d0
+  jsr copy_data
+
+  move.l #FIREBALL1C_DST,a1
+  move.l #fireballc_data,a2
   move.w #8,d0
   jsr copy_data
 
@@ -232,6 +260,10 @@ init:
   move.w #$0068,fireball1+4  ; y2
   move.w #$00f8,fireball1+2
   move.w #$0108,fireball1+6
+  move.w #$0000,fireball1+8  ; counter
+  move.l #FIREBALL1A_DST,fireball1+12  ; current frame
+  move.l #FIREBALL1B_DST,fireball1+16  ; frame 1
+  move.l #FIREBALL1C_DST,fireball1+20  ; frame 2
 
   ;;;;;;;;;;;;;;;;;;;
   ; Enemy 0
@@ -443,18 +475,6 @@ skip_load_bpl
 
   ; end of copperlist
   move.l #$fffffffe,(a6)+
-
-  ; setup sprite registers, have to be setup every vblank
-  ; TODO(lucaw) but this isn't the vblank?  or it is still vblank
-  ; because before jumping to mainloop there was a wait for vblank.
-  move.l #SHIP_DST,SPR0PTH     ; Sprite 0 pointer = $25000 actually used sprite
-  move.l #DUMMY_DST,SPR1PTH     ; Sprite 1 pointer = $30000 dummy sprite
-  move.l #FIREBALL0_DST,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
-  move.l #FIREBALL1_DST,SPR3PTH     ; Sprite 2 pointer = $25000 actually used sprite
-  move.l #BUG1_DST,SPR4PTH
-  move.l #BUG2_DST,SPR5PTH
-  move.l #DUMMY_DST,SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
-  move.l #DUMMY_DST,SPR7PTH     ; Sprite 7 pointer = $25000 actually used sprite
 
   ; detect key press, use special keys for now
   ;cmp.b #$37,SKEYS  ; shift left
@@ -684,12 +704,26 @@ update_fireballs:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; subroutine launch/update fireball
 test_fireball:
-  cmp.w #$00fa,2(a0)
+  cmp.w #$00f0,2(a0)
   bge test_shoot_fireball
 move_fireball:
   add.w #2,2(a0)
   add.w #2,6(a0)
-  rts
+
+  rts  ; temp disable of not working animation below
+  ; update fireball animation
+  ; error 3005: reloc type 1, size 16, mask 0xffffffffffffffff (symbol frame + 0x920) not supported
+  ; move.l #frame,d3  ; this was wrong anyway, but gives the above error without a line number
+  move.l frame,d3
+  ;and.b #$ff,d3
+  cmp.b #$10,d3
+  beq fireball_frame2
+  fireball_frame1:
+    move.l 16(a0),12(a0)  ; use frame1
+    rts
+  fireball_frame2:
+    move.l 20(a0),12(a0)  ; use frame2
+    rts
 test_shoot_fireball:
   cmp.b #1,d0
   bne done_test_fireball
@@ -855,9 +889,18 @@ waitVB:
   cmp.l #300<<8,d0
   bne waitVB
 
-  ; Take copper list into use
-  move.l #copper_list,a6
-  move.l a6,COP1LCH
+
+  ; setup sprite registers, have to be setup every vblank
+  ; TODO(lucasw) but this isn't the vblank?  or it is still vblank
+  ; because before jumping to mainloop there was a wait for vblank.
+  move.l #SHIP_DST,SPR0PTH     ; Sprite 0 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR1PTH     ; Sprite 1 pointer = $30000 dummy sprite
+  move.l fireball0+12,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
+  move.l fireball1+12,SPR3PTH     ; Sprite 2 pointer = $25000 actually used sprite
+  move.l #BUG1_DST,SPR4PTH
+  move.l #BUG2_DST,SPR5PTH
+  move.l #DUMMY_DST,SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,SPR7PTH     ; Sprite 7 pointer = $25000 actually used sprite
 
 ;;;;;;;;;;;;;;;;
 ; seems like this should be done during vblank unless re-using sprites
@@ -871,13 +914,21 @@ update_sprite_registers:
   move.b enemy1+1,BUG2_DST    ; VSTART
   move.b enemy1+3,BUG2_DST+1  ; HSTART
   move.b enemy1+5,BUG2_DST+2  ; VSTOP
-  move.b fireball0+1,FIREBALL0_DST    ; VSTART
-  move.b fireball0+3,FIREBALL0_DST+1  ; HSTART
-  move.b fireball0+5,FIREBALL0_DST+2  ; VSTOP
-  move.b fireball1+1,FIREBALL1_DST    ; VSTART
-  move.b fireball1+3,FIREBALL1_DST+1  ; HSTART
-  move.b fireball1+5,FIREBALL1_DST+2  ; VSTOP
+
+  move.l fireball0+12,a0
+  move.b fireball0+1,(a0)   ; VSTART
+  move.b fireball0+3,1(a0)  ; HSTART
+  move.b fireball0+5,2(a0)  ; VSTOP
+
+  move.l fireball1+12,a0
+  move.b fireball1+1,(a0)   ; VSTART
+  move.b fireball1+3,1(a0)  ; HSTART
+  move.b fireball1+5,2(a0)  ; VSTOP
   ; TODO add the higher bits to SPRxCTL?
+
+  ; Take copper list into use - but only after above updates have been made?
+  move.l #copper_list,a6
+  move.l a6,COP1LCH
 
 skip4:
   ;sub.b #1,BUG1_DST+1
@@ -978,14 +1029,20 @@ enemy7:
   dc.l 0
   CNOP 0,4
 fireball0:
-  dc.l 0
-  dc.l 0
-  dc.l 0
+  dc.l 0   ; y1 x1
+  dc.l 0   ; y2 x2
+  dc.l 0   ; counter
+  dc.l 0   ; address to current sprite memory (can't be same as fireball1)
+  dc.l 0   ; frame1 address
+  dc.l 0   ; frame2 address
   CNOP 0,4
 fireball1:
   dc.l 0
   dc.l 0
   dc.l 0
+  dc.l 0   ; current frame
+  dc.l 0   ; frame1 address
+  dc.l 0   ; frame2 address
   CNOP 0,4
 
 ; storage for 8-bit data
@@ -1030,6 +1087,14 @@ fireball_data:
   incbin "gimp/fireball.data.raw"
   CNOP 4,4             ; End of sprite data
 end_fireball_data:
+fireballb_data:
+  dc.w    $00ff,$1000             ;VSTART, HSTART, VSTOP
+  incbin "gimp/fireball2.data.raw"
+  CNOP 4,4             ; End of sprite data
+fireballc_data:
+  dc.w    $00ff,$1000             ;VSTART, HSTART, VSTOP
+  incbin "gimp/fireball3.data.raw"
+  CNOP 4,4             ; End of sprite data
 bug_data:
   ; 0x48 is far left (with no pixels off screen to left
   ; 0xd8 seems to be almost the end of the screen- is hstart added to another number
