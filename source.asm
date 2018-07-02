@@ -223,7 +223,7 @@ init:
   jsr copy_data
 
   move.l #FIREBALL0B_DST,a1
-  move.l #fireball_data,a2
+  move.l #fireballb_data,a2
   move.w #8,d0
   jsr copy_data
 
@@ -709,15 +709,16 @@ test_fireball:
 move_fireball:
   add.w #2,2(a0)
   add.w #2,6(a0)
+  add.w #1,8(a0)
 
-  rts  ; temp disable of not working animation below
+  ;rts  ; temp disable of not working animation below
   ; update fireball animation
   ; error 3005: reloc type 1, size 16, mask 0xffffffffffffffff (symbol frame + 0x920) not supported
   ; move.l #frame,d3  ; this was wrong anyway, but gives the above error without a line number
-  move.l frame,d3
-  ;and.b #$ff,d3
-  cmp.b #$10,d3
-  beq fireball_frame2
+  move.w 8(a0),d3
+  and.l #$0f,d3
+  cmp.l #$08,d3
+  bge fireball_frame2
   fireball_frame1:
     move.l 16(a0),12(a0)  ; use frame1
     rts
@@ -1031,7 +1032,7 @@ enemy7:
 fireball0:
   dc.l 0   ; y1 x1
   dc.l 0   ; y2 x2
-  dc.l 0   ; counter
+  dc.l 0   ; counter + status
   dc.l 0   ; address to current sprite memory (can't be same as fireball1)
   dc.l 0   ; frame1 address
   dc.l 0   ; frame2 address
