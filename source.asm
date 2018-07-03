@@ -578,6 +578,14 @@ collision_detection:
   bne ship_bug_collision
   bra test_fireball_bug_collision
 ship_bug_collision:
+  move.l #explosion_audio_data,AUD0LCH
+  move.w #end_explosion_audio_data-explosion_audio_data,AUD0LEN
+  move.w #447,AUD0PER
+  move.w #60,AUD0VOL
+  move.w #1,audio0   ; stop whatever is playing
+  move.w #1,audio0+2 ; start this next
+  move.w #70,audio0+4   ; play this for this long
+
   ; sub.w #10,player_ship+2
   move.w #$48,player_ship+2
   move.w #$58,player_ship+6
@@ -624,8 +632,8 @@ test_enemy_collision_return:
   cmp.b #$1,d0
   bne done_enemy_collision
   ; there was a collision, play a sound effect
-  move.l #explosion_audio_data,AUD0LCH
-  move.w #end_explosion_audio_data-explosion_audio_data,AUD0LEN
+  move.l #bug_death_audio_data,AUD0LCH
+  move.w #end_bug_death_audio_data-bug_death_audio_data,AUD0LEN
   move.w #447,AUD0PER
   move.w #60,AUD0VOL
   move.w #1,audio0   ; stop whatever is playing
@@ -1150,6 +1158,10 @@ explosion_audio_data:
   incbin "sound/explosion.wav.raw"
   CNOP 0,4             ; End of sprite data
 end_explosion_audio_data:
+bug_death_audio_data:
+  incbin "sound/bugdeath.wav.raw"
+  CNOP 0,4             ; End of sprite data
+end_bug_death_audio_data:
 
 copper_list:
   dc.l $ffffffe ; end of copper list
