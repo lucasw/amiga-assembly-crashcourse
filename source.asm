@@ -623,6 +623,16 @@ test_enemy_collision_return:
   ; a1 the fireball
   cmp.b #$1,d0
   bne done_enemy_collision
+  ; there was a collision, play a sound effect
+  move.l #explosion_audio_data,AUD0LCH
+  move.w #end_explosion_audio_data-explosion_audio_data,AUD0LEN
+  move.w #447,AUD0PER
+  move.w #60,AUD0VOL
+  move.w #1,audio0   ; stop whatever is playing
+  move.w #1,audio0+2 ; start this next
+  move.w #70,audio0+4   ; play this for this long
+
+  ; move the enemy off screen
   move.w #$100,2(a0)  ; x1
   move.w #$110,6(a0)  ; x2
   jsr new_y_position
@@ -740,14 +750,14 @@ shoot_fireball:
   ; play shoot sound
   move.l #shoot_audio_data,AUD0LCH
   move.w #end_shoot_audio_data-shoot_audio_data,AUD0LEN
-  ; move.w #4986,AUD0LEN
+  ;move.w #3000,AUD0LEN
   move.w #447,AUD0PER
   ; move.w #%111111,AUD0VOL
   ; move.w #$20,AUD0VOL
   move.w #60,AUD0VOL
   move.w #1,audio0   ; stop whatever is playing
   move.w #1,audio0+2 ; start this next
-  move.w #100,audio0+4   ; play this for this long
+  move.w #33,audio0+4   ; play this for this long
   ; move.w #$8000+$200+1,DMACON  ; DMA set ON - TODO(lucasw) doesn't the $200 turn all dma on?
 
 done_test_fireball:
@@ -853,24 +863,28 @@ done_update_enemies:
 
 update_audio:
 update_audio0:
+  ; wait some counts before turning off audio
   cmp.w #0,audio0
   ; if audio0 goes negative then that will end the counting
   beq audio0_off
-  blt.w dec_audio0_off
+  bgt.w dec_audio0_off
+  ; now wait some counts before turning on audio (otherwise the sound may not reset to start)
   cmp.w #0,audio0+2
   beq audio0_on
-  blt.w dec_audio0_on
+  bgt.w dec_audio0_on
 audio0_off:
+  move.w #-1,audio0
   move.w #$0001,DMACON     ; DMA audio OFF
 dec_audio0_off:
-  sub.w #1,audio0+2
+  sub.w #1,audio0
   bra done_update_audio0
 audio0_on:
+  move.w #-1,audio0+2  ; don't play again the next time
   move.w #$8001,DMACON
-dec_audio0_on:
-  sub.w #1,audio0
-  move.w audio0+4,audio0+2  ; queue up the next play if any
+  move.w audio0+4,audio0  ; turn this newly turned on sound off in this many counts
   move.w #-1,audio0+4  ; don't play again the next time
+dec_audio0_on:
+  sub.w #1,audio0+2
   bra done_update_audio0
 done_update_audio0:
 
@@ -889,7 +903,6 @@ waitVB:
   and.l #$1ff00,d0
   cmp.l #300<<8,d0
   bne waitVB
-
 
   ; setup sprite registers, have to be setup every vblank
   ; TODO(lucasw) but this isn't the vblank?  or it is still vblank
@@ -1066,8 +1079,9 @@ test_pos:
 ; audio control
 audio0:
   dc.w -1  ; count down to stop playing this channel
+  ; need a gap after stopping to get a new sound, or restart same sound
   dc.w -1  ; count down to start playing the channel (count down above first)
-  dc.w -1  ; count down to stop playing this channel
+  dc.w -1  ; count down to stop playing this channel after starting above
   CNOP 0,4
 
 ; Sprite data
@@ -1129,10 +1143,13 @@ mountains_data:
 
 sound_effects:
 shoot_audio_data:
-  ;dc.w    $00ff,$1000             ;VSTART, HSTART, VSTOP
   incbin "sound/shoot.wav.raw"
-  CNOP 4,4             ; End of sprite data
+  CNOP 0,4             ; End of sprite data
 end_shoot_audio_data:
+explosion_audio_data:
+  incbin "sound/explosion.wav.raw"
+  CNOP 0,4             ; End of sprite data
+end_explosion_audio_data:
 
 copper_list:
   dc.l $ffffffe ; end of copper list
