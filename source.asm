@@ -648,17 +648,6 @@ test_enemy_collision:
 
   bra done_collision
 
-;;;;
-; TODO(lucasw) may not want the blitting done here, wait for vblank instead? or some other time?
-  bra skip_blit_wait
-blit_wait:
-  tst DMACONR  ; A1000 compatibility
-  .waitblit:
-    btst #6,DMACONR
-    bne.s .waitblit
-    rts
-skip_blit_wait:
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 test_enemy_collision_return:
   ; a0 the enemy
@@ -674,8 +663,9 @@ test_enemy_collision_return:
   move.w #1,audio0+2 ; start this next
   move.w #70,audio0+4   ; play this for this long
   ; blitter - TODO(lucasw) is this a good place in the frame to do this?
+  ; TODO(lucasw) do it all in the copper list
   ; instead of an animation just a single frame for now
-  bsr blit_wait
+  ;bsr blit_wait
   move.l #$09f00000,BLTCON0
   move.l #$ffffffff,BLTAFWM
   move.w #0,BLTAMOD  ; A modulo : vertical arrangement so set to zero
@@ -697,9 +687,10 @@ test_enemy_collision_return:
   ; width and height
   ; height is in lines, width is in words
   move.l #mountains_data,BLTDPTH
-  bra skip_blit
+  move.b #1,do_blit
   ; this triggers the blit, but it screws up and requires a restart currently
-  move.w #32*64+32/16,BLTSIZE  ; height shifted 6 bits left + last 6 bits for width in words
+  ;move.w #32*64+32/16,BLTSIZE  ; height shifted 6 bits left + last 6 bits for width in words
+  ;move.w #$0102,BLTSIZE  ; height shifted 6 bits left + last 6 bits for width in words
 skip_blit:
 
   ; move the enemy off screen
@@ -991,6 +982,25 @@ waitVB:
   move.l #DUMMY_DST,SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
   move.l #DUMMY_DST,SPR7PTH     ; Sprite 7 pointer = $25000 actually used sprite
 
+;;;;
+; TODO(lucasw) may not want the blitting done here, wait for vblank instead? or some other time?
+  bra skip_blit_wait
+blit_wait:
+  tst DMACONR  ; A1000 compatibility
+  .waitblit:
+    btst #6,DMACONR
+    bne.s .waitblit
+    rts
+skip_blit_wait:
+
+  bra after_blit  ; disable the blit
+  cmp.b #1,do_blit
+  bne.b after_blit
+  move.b #0,do_blit
+  bsr blit_wait
+  move.w #32*64+32/16,BLTSIZE  ; height shifted 6 bits left + last 6 bits for width in words
+after_blit:
+
 ;;;;;;;;;;;;;;;;
 ; seems like this should be done during vblank unless re-using sprites
 update_sprite_registers:
@@ -1070,10 +1080,12 @@ frame:
 pf_scroll_x:
   dc.l 0
   CNOP 0,4
+do_blit:
+  dc.b 0
+  CNOP 0,4
 old_ciaapra:
   dc.l 0
   CNOP 0,4
-
 
 ; sprite metadata
 player_ship:
