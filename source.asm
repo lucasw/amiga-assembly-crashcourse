@@ -674,8 +674,8 @@ test_enemy_collision_return:
   move.w #70,audio0+4   ; play this for this long
   ; blitter - TODO(lucasw) is this a good place in the frame to do this?
   ; instead of an animation just a single frame for now
-  bra skip_blit
   bsr blit_wait
+  bra skip_blit
   move.l #$09f00000,BLTCON0
   move.l #$ffffffff,BLTAFWM
   move.w #0,BLTAMOD  ; A modulo : vertical arrangement so set to zero
@@ -706,8 +706,8 @@ skip_blit:
   ;move.b frame+$10,4(a2)
   ; reset fireball if it hits an enemy
   ; TODO(lucasw) make a subroutine for this- or is that slower?
-  move.w #$00fa,2(a1)
-  move.w #$010a,6(a1)
+  move.w #$0110,2(a1)
+  move.w #$0120,6(a1)
   move.w #$0,(a1)
   move.w #$8,4(a1)
 done_enemy_collision:
