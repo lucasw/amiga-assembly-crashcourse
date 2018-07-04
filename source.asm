@@ -5,6 +5,27 @@ ADKCONR    EQU    $dff010
 INTENAR    EQU    $dff01c
 INTREQR    EQU    $dff01e
 
+BLTCON0  EQU $dff040
+BLTCON1  EQU $dff041
+BLTAFWM  EQU $dff044
+BLTALWM  EQU $dff046
+
+BLTCPTH  EQU $dff048
+BLTCPTL  EQU $dff04a
+BLTBPTH  EQU $dff04c
+BLTBPTL  EQU $dff04e
+BLTAPTH  EQU $dff050
+BLTAPTL  EQU $dff052
+BLTDPTH  EQU $dff054
+BLTDPTL  EQU $dff056
+
+BLTSIZE  EQU $dff058
+
+BLTCMOD  EQU $dff060  ; modulo source C
+BLTBMOD  EQU $dff062  ; modulo source B
+BLTAMOD  EQU $dff064  ; modulo source A
+BLTDMOD  EQU $dff066  ; modulo destination D
+
 ; DMACON
 ;15  SET/CLR Set/Clear control bit. Determines if bits
 ;written with a 1 get set or cleared
@@ -144,6 +165,9 @@ BUG1_DST EQU FIREBALL1C_DST+end_fireball_data-fireball_data
 BUG2_DST EQU BUG1_DST+end_bug_data-bug_data
 DUMMY_DST EQU BUG2_DST+end_bug_data-bug_data
 
+SCREEN_WIDTH EQU 320
+PF_WIDTH EQU 640
+
 init:
   ; store data in hardwareregisters ORed with $8000
   ;(bit 15 is a write-set bit when values are written back into the system)
@@ -194,6 +218,8 @@ init:
   ; move.w #$00c8,BPL2MOD      ; even modulo
   ; vertical arrangement
   ; bplmod = (width of the playfield - width screen) / 8
+  ;move.w #(SCREEN_WIDTH-PF_WIDTH)/8,BPL1MOD      ; odd modulo
+  ;move.w #(SCREEN_WIDTH-PF_WIDTH)/8,BPL2MOD      ; even modulo
   move.w #$0028,BPL1MOD      ; odd modulo
   move.w #$0028,BPL2MOD      ; even modulo
   move.w #$2c91,DIWSTRT      ; DIWSTRT - topleft corner (2c81)
@@ -321,7 +347,6 @@ main_loop:
   ; write instructions into copperlist
   ; TODO(lucasw) couldn't this be done once if they aren't changing?
 
-
   ; start setting up copper list
   move.l #copper_list,a6
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -349,10 +374,10 @@ main_loop:
 
   ;;;;;;;;;;;;;;;;;;;;;;
   ; mountains bitplanes
-  move.l frame,d1
-  lsr #4,d1
+  move.l pf_scroll_x,d1
+  lsr #3,d1  ; divide by 8 for byte scroll value
   move.l #mountains_data,d0
-  add.w d1,d0  ; scroll 8 pixels when this increments
+  add.w d1,d0  ; scroll 8 pixels when scroll_x/8 increments
   move.w #BPL1PTL,d2
   move.w #BPL1PTH,d3
   jsr load_bpl
@@ -451,12 +476,9 @@ skip_load_bpl
 
   ; scroll every row the same
   ; the mountains
-  ; TODO(lucasw) the calculations to determine the scroll speed
-  ; should be done outside of the setting of the copper list?
   move.w #$0102,(a6)+  ; BPLCON1
-  move.l frame,d2
-  lsr #1,d2  ; slow down the scrolling
-  and.w #$000f,d2
+  move.l pf_scroll_x,d2
+  and.w #$000f,d2  ; only take last four bits for scroll within 1 byte
   move.w #$f,d3
   ; reverse direction because scrolling right
   sub.w d2,d3
@@ -625,13 +647,24 @@ test_enemy_collision:
 
   bra done_collision
 
+;;;;
+; TODO(lucasw) may not want the blitting done here, wait for vblank instead? or some other time?
+  bra skip_blit_wait
+blit_wait:
+  tst DMACONR  ; A1000 compatibility
+  .waitblit:
+    btst #6,DMACONR
+    bne.s .waitblit
+    rts
+skip_blit_wait:
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 test_enemy_collision_return:
   ; a0 the enemy
   ; a1 the fireball
   cmp.b #$1,d0
   bne done_enemy_collision
-  ; there was a collision, play a sound effect
+  ; there was a collision, play a sound effect and start an explosion animation
   move.l #bug_death_audio_data,AUD0LCH
   move.w #end_bug_death_audio_data-bug_death_audio_data,AUD0LEN
   move.w #447,AUD0PER
@@ -639,6 +672,31 @@ test_enemy_collision_return:
   move.w #1,audio0   ; stop whatever is playing
   move.w #1,audio0+2 ; start this next
   move.w #70,audio0+4   ; play this for this long
+  ; blitter - TODO(lucasw) is this a good place in the frame to do this?
+  ; instead of an animation just a single frame for now
+  bra skip_blit
+  bsr blit_wait
+  move.l #$09f00000,BLTCON0
+  move.l #$ffffffff,BLTAFWM
+  move.w #0,BLTAMOD  ; A modulo : vertical arrangement so set to zero
+  move.w #(PF_WIDTH-32)/8,BLTDMOD  ; D modulo : playfield width/8-blitwidth*2
+  move.l #explosion_data,BLTAPTH
+  ; calculate byte offset into mountains_data
+  clr.l d0
+  add.w 1(a0),d0  ; x position for the explosion
+  clr.l d1
+  add.w a0,d1  ; y position for the explosion
+  mulu.w #PF_WIDTH/8,d1
+  add.l d0,d1
+  move.l #mountains_data,d2
+  add.l d1,d2
+  move.l pf_scroll_x,d3
+  lsr.l #3,d3  ; only want byte address, worry about pixel offsets later
+  move.l d2,BLTDPTH
+  ; width and height
+  ; height is in lines, width is in words
+  move.w #32*64+32*2,BLTSIZE  ; height shifted 6 bits left + last 6 bits for width
+skip_blit:
 
   ; move the enemy off screen
   move.w #$100,2(a0)  ; x1
@@ -904,6 +962,11 @@ mouse_test:
   ; btst.b #7,CIAAPRA
   ; beq exit
 
+update_scroll:
+  move.l frame,d0
+  lsr.l #1,d0  ; scroll 1 pixel every other frame
+  move.l d0,pf_scroll_x
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Wait for vertical blanking before taking the copper list into use
 waitVB:
@@ -1000,9 +1063,14 @@ frame:
   dc.l 0
   ; storage for 16-bit data
   CNOP 0,4
+pf_scroll_x:
+  dc.l 0
+  CNOP 0,4
 old_ciaapra:
   dc.l 0
   CNOP 0,4
+
+
 ; sprite metadata
 player_ship:
   dc.l 0
@@ -1147,6 +1215,12 @@ sky_data:  ; TODO(lucasw) what address is this actually?
 mountains_data:
   incbin "gimp/mountains.data.raw"
   ; datalists aligned to 32-bit
+  CNOP 0,4
+; mountains_size:
+;   dc.w #640
+;   dc.w #200
+explosion_data:
+  incbin "gimp/explosion.data.raw"
   CNOP 0,4
 
 sound_effects:
