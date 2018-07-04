@@ -20,6 +20,9 @@ BLTDPTH  EQU $dff054
 BLTDPTL  EQU $dff056
 
 BLTSIZE  EQU $dff058
+; AGA only
+;BLTSIZV  EQU $dff05c
+;BLTSIZH  EQU $dff05e
 
 BLTCMOD  EQU $dff060  ; modulo source C
 BLTBMOD  EQU $dff062  ; modulo source B
@@ -218,10 +221,8 @@ init:
   ; move.w #$00c8,BPL2MOD      ; even modulo
   ; vertical arrangement
   ; bplmod = (width of the playfield - width screen) / 8
-  ;move.w #(SCREEN_WIDTH-PF_WIDTH)/8,BPL1MOD      ; odd modulo
-  ;move.w #(SCREEN_WIDTH-PF_WIDTH)/8,BPL2MOD      ; even modulo
-  move.w #$0028,BPL1MOD      ; odd modulo
-  move.w #$0028,BPL2MOD      ; even modulo
+  move.w #(PF_WIDTH-SCREEN_WIDTH)/8,BPL1MOD      ; odd modulo
+  move.w #(PF_WIDTH-SCREEN_WIDTH)/8,BPL2MOD      ; even modulo
   move.w #$2c91,DIWSTRT      ; DIWSTRT - topleft corner (2c81)
   move.w #$f8c1,DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
   move.w #$0038,DDFSTRT      ; DDFSTRT
@@ -675,27 +676,30 @@ test_enemy_collision_return:
   ; blitter - TODO(lucasw) is this a good place in the frame to do this?
   ; instead of an animation just a single frame for now
   bsr blit_wait
-  bra skip_blit
   move.l #$09f00000,BLTCON0
   move.l #$ffffffff,BLTAFWM
   move.w #0,BLTAMOD  ; A modulo : vertical arrangement so set to zero
   move.w #(PF_WIDTH-32)/8,BLTDMOD  ; D modulo : playfield width/8-blitwidth*2
   move.l #explosion_data,BLTAPTH
   ; calculate byte offset into mountains_data
-  clr.l d0
-  add.w 1(a0),d0  ; x position for the explosion
-  clr.l d1
-  add.w a0,d1  ; y position for the explosion
-  mulu.w #PF_WIDTH/8,d1
-  add.l d0,d1
-  move.l #mountains_data,d2
-  add.l d1,d2
-  move.l pf_scroll_x,d3
-  lsr.l #3,d3  ; only want byte address, worry about pixel offsets later
-  move.l d2,BLTDPTH
+  ;clr.l d0
+  ;add.w 2(a0),d0  ; x position for the explosion
+  ;clr.l d1
+  ;add.w (a0),d1  ; y position for the explosion
+  ;mulu.w #PF_WIDTH/8,d1
+  ;add.l d0,d1
+  ;move.l #mountains_data,d2
+  ;add.l d1,d2
+  ;move.l pf_scroll_x,d3
+  ;lsr.l #3,d3  ; only want byte address, worry about pixel offsets later
+  ;add.l d3,d2
+  ;move.l d2,BLTDPTH
   ; width and height
   ; height is in lines, width is in words
-  move.w #32*64+32*2,BLTSIZE  ; height shifted 6 bits left + last 6 bits for width
+  move.l #mountains_data,BLTDPTH
+  bra skip_blit
+  ; this triggers the blit, but it screws up and requires a restart currently
+  move.w #32*64+32/16,BLTSIZE  ; height shifted 6 bits left + last 6 bits for width in words
 skip_blit:
 
   ; move the enemy off screen
