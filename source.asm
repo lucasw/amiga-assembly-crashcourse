@@ -1,12 +1,12 @@
-; registers
-
-DMACONR    EQU    $dff002
-ADKCONR    EQU    $dff010
-INTENAR    EQU    $dff01c
-INTREQR    EQU    $dff01e
-
 BASEADD  EQU $dff000
-; TODO(lucasw) to store without the dff so that the copper list can use them.
+
+; registers
+; store without the dff so that the copper list can use them.
+DMACONR    EQU    $002
+ADKCONR    EQU    $010
+INTENAR    EQU    $01c
+INTREQR    EQU    $01e
+
 BLTCON0  EQU $040
 BLTCON1  EQU $041
 BLTAFWM  EQU $044
@@ -54,10 +54,10 @@ BLTDMOD  EQU $066  ; modulo destination D
 ;02  AUD2EN  Audio channel 2 DMA enable
 ;01  AUD1EN  Audio channel 1 DMA enable
 ;00  AUD0EN  Audio channel 0 DMA enable
-DMACON    EQU    $dff096
-ADKCON    EQU    $dff09e
-INTENA    EQU    $dff09a
-INTREQ    EQU    $dff09c
+DMACON    EQU    $096
+ADKCON    EQU    $09e
+INTENA    EQU    $09a
+INTREQ    EQU    $09c
 
 ; audio
 AUD0LCH  EQU $dff0a0
@@ -178,16 +178,16 @@ PF_WIDTH EQU 640
 init:
   ; store data in hardwareregisters ORed with $8000
   ;(bit 15 is a write-set bit when values are written back into the system)
-  move.w DMACONR,d0
+  move.w BASEADD+DMACONR,d0
   or.w #$8000,d0
   move.w d0,olddmareq
-  move.w INTENAR,d0
+  move.w BASEADD+INTENAR,d0
   or.w #$8000,d0
   move.w d0,oldintena
-  move.w INTREQR,d0
+  move.w BASEADD+INTREQR,d0
   or.w #$8000,d0
   move.w d0,oldintreq
-  move.w ADKCONR,d0
+  move.w BASEADD+ADKCONR,d0
   or.w #$8000,d0
   move.w d0,oldadkcon
 
@@ -231,10 +231,10 @@ init:
   move.w #$f8c1,BASEADD+DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
   move.w #$0038,BASEADD+DDFSTRT      ; DDFSTRT
   move.w #$00d0,BASEADD+DDFSTOP      ; DDFSTOP
-  move.w #%1000000110100000,DMACON  ; DMA set ON
-  move.w #%0000000001011111,DMACON  ; DMA set OFF
-  move.w #%1100000000000000,INTENA  ; IRQ set ON
-  move.w #%0011111111111111,INTENA  ; IRQ set OFF
+  move.w #%1000000110100000,BASEADD+DMACON  ; DMA set ON
+  move.w #%0000000001011111,BASEADD+DMACON  ; DMA set OFF
+  move.w #%1100000000000000,BASEADD+INTENA  ; IRQ set ON
+  move.w #%0011111111111111,BASEADD+INTENA  ; IRQ set OFF
 
   ; TODO(lucasw) make this general for loading any sprite
   ; the ship sprite
@@ -853,7 +853,7 @@ shoot_fireball:
   move.w #1,audio0   ; stop whatever is playing
   move.w #1,audio0+2 ; start this next
   move.w #33,audio0+4   ; play this for this long
-  ; move.w #$8000+$200+1,DMACON  ; DMA set ON - TODO(lucasw) doesn't the $200 turn all dma on?
+  ; move.w #$8000+$200+1,BASEADD+DMACON  ; DMA set ON - TODO(lucasw) doesn't the $200 turn all dma on?
 
 done_test_fireball:
   rts
@@ -969,13 +969,13 @@ update_audio0:
   bgt.w dec_audio0_on
 audio0_off:
   move.w #-1,audio0
-  move.w #$0001,DMACON     ; DMA audio OFF
+  move.w #$0001,BASEADD+DMACON     ; DMA audio OFF
 dec_audio0_off:
   sub.w #1,audio0
   bra done_update_audio0
 audio0_on:
   move.w #-1,audio0+2  ; don't play again the next time
-  move.w #$8001,DMACON
+  move.w #$8001,BASEADD+DMACON
   move.w audio0+4,audio0  ; turn this newly turned on sound off in this many counts
   move.w #-1,audio0+4  ; don't play again the next time
 dec_audio0_on:
@@ -1020,9 +1020,9 @@ wait_vertical_blank:
 ; TODO(lucasw) may not want the blitting done here, wait for vblank instead? or some other time?
 ;  bra skip_blit_wait
 ;blit_wait:
-;  tst DMACONR  ; A1000 compatibility
+;  tst BASEADD+DMACONR  ; A1000 compatibility
 ;  .waitblit:
-;    btst #6,DMACONR
+;    btst #6,BASEADD+DMACONR
 ;    bne.s .waitblit
 ;    rts
 ;skip_blit_wait:
@@ -1064,14 +1064,14 @@ skip4:
 
 exit:
 ; exit gracefully - reverse everything done in init
-  move.w #$7fff,DMACON
-  move.w olddmareq,DMACON
-  move.w #$7fff,INTENA
-  move.w oldintena,INTENA
-  move.w #$7fff,INTREQ
-  move.w oldintreq,INTREQ
-  move.w #$7fff,ADKCON
-  move.w oldadkcon,ADKCON
+  move.w #$7fff,BASEADD+DMACON
+  move.w olddmareq,BASEADD+DMACON
+  move.w #$7fff,BASEADD+INTENA
+  move.w oldintena,BASEADD+INTENA
+  move.w #$7fff,BASEADD+INTREQ
+  move.w oldintreq,BASEADD+INTREQ
+  move.w #$7fff,BASEADD+ADKCON
+  move.w oldadkcon,BASEADD+ADKCON
 
   move.l oldcopper,BASEADD+COP1LCH
   move.l gfxbase,a6
