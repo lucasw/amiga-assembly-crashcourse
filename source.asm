@@ -81,14 +81,14 @@ BPLCON1    EQU             $102
 BPLCON2    EQU             $104
 BPL1MOD    EQU             $108
 BPL2MOD    EQU             $10a
-DIWSTRT    EQU             $dff08e
-DIWSTOP    EQU             $dff090
-DDFSTRT    EQU             $dff092
-DDFSTOP    EQU             $dff094
-VPOSR      EQU             $dff004
-COP1LCH    EQU             $dff080
+DIWSTRT    EQU             $08e
+DIWSTOP    EQU             $090
+DDFSTRT    EQU             $092
+DDFSTOP    EQU             $094
+VPOSR      EQU             $004
+COP1LCH    EQU             $080
 ; how is this used?
-COP2LCH    EQU             $dff084
+COP2LCH    EQU             $084
 
 BPL1PTH EQU $0e0 ; Bit plane 1 pointer (high 5 bits)
 BPL1PTL EQU $0e2 ; Bit plane 1 pointer (low 15 bits)
@@ -227,10 +227,10 @@ init:
   ; bplmod = (width of the playfield - width screen) / 8
   move.w #(PF_WIDTH-SCREEN_WIDTH)/8,BASEADD+BPL1MOD      ; odd modulo
   move.w #(PF_WIDTH-SCREEN_WIDTH)/8,BASEADD+BPL2MOD      ; even modulo
-  move.w #$2c91,DIWSTRT      ; DIWSTRT - topleft corner (2c81)
-  move.w #$f8c1,DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
-  move.w #$0038,DDFSTRT      ; DDFSTRT
-  move.w #$00d0,DDFSTOP      ; DDFSTOP
+  move.w #$2c91,BASEADD+DIWSTRT      ; DIWSTRT - topleft corner (2c81)
+  move.w #$f8c1,BASEADD+DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
+  move.w #$0038,BASEADD+DDFSTRT      ; DDFSTRT
+  move.w #$00d0,BASEADD+DDFSTOP      ; DDFSTOP
   move.w #%1000000110100000,DMACON  ; DMA set ON
   move.w #%0000000001011111,DMACON  ; DMA set OFF
   move.w #%1100000000000000,INTENA  ; IRQ set ON
@@ -999,7 +999,7 @@ update_scroll:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Wait for vertical blanking before taking the copper list into use
 wait_vertical_blank:
-  move.l VPOSR,d0
+  move.l BASEADD+VPOSR,d0
   and.l #$1ff00,d0
   cmp.l #300<<8,d0
   bne wait_vertical_blank
@@ -1053,7 +1053,7 @@ update_sprite_registers:
 
   ; Take copper list into use - but only after above updates have been made?
   move.l #copper_list,a6
-  move.l a6,COP1LCH  ; this is automatically used at beginning of each vertical blank
+  move.l a6,BASEADD+COP1LCH  ; this is automatically used at beginning of each vertical blank
 
 skip4:
   ;sub.b #1,BUG1_DST+1
@@ -1073,7 +1073,7 @@ exit:
   move.w #$7fff,ADKCON
   move.w oldadkcon,ADKCON
 
-  move.l oldcopper,COP1LCH
+  move.l oldcopper,BASEADD+COP1LCH
   move.l gfxbase,a6
   move.l oldview,a1
   jsr -222(a6)  ; LoadView
