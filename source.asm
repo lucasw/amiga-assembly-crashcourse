@@ -60,20 +60,20 @@ INTENA    EQU    $09a
 INTREQ    EQU    $09c
 
 ; audio
-AUD0LCH  EQU $dff0a0
-AUD0LCL  EQU $dff0a2
-AUD0LEN  EQU $dff0a4
-AUD0PER  EQU $dff0a6  ; 124 -> 28.86 KHz, 447 -> 8 KHz
-AUD0VOL  EQU $dff0a8
-AUD0DAT  EQU $dff0aa
+AUD0LCH  EQU $0a0
+AUD0LCL  EQU $0a2
+AUD0LEN  EQU $0a4
+AUD0PER  EQU $0a6  ; 124 -> 28.86 KHz, 447 -> 8 KHz
+AUD0VOL  EQU $0a8
+AUD0DAT  EQU $0aa
 
-AUD1DAT  EQU $dff0ba
-AUD2DAT  EQU $dff0ca
-AUD3DAT  EQU $dff0da
+AUD1DAT  EQU $0ba
+AUD2DAT  EQU $0ca
+AUD3DAT  EQU $0da
 
-CLXCON   EQU  $dff098  ; collision control
-CLXCON2  EQU  $dff10e  ; collision control
-CLXDAT   EQU  $dff00e  ; collision detection
+CLXCON   EQU  $098  ; collision control
+CLXCON2  EQU  $10e  ; collision control
+CLXDAT   EQU  $00e  ; collision detection
 
 ; the 000 is dropped for use in the copper
 BPLCON0    EQU             $100
@@ -112,8 +112,8 @@ CIAAPRA EQU $bfe001  ; joystick and mouse buttons
 
 CIAASDR    EQU             $bfec01
 
-JOY0DAT EQU $dff00a
-JOY1DAT EQU $dff00c
+JOY0DAT EQU $00a
+JOY1DAT EQU $00c
 
 ; SPRxCTL
 ;15-08 EV7-EV0 End (stop) vertical value. Low 8 bits
@@ -126,33 +126,33 @@ JOY1DAT EQU $dff00c
 ;01  EV8 End (stop) vertical value 9th bit
 ;00  SH2 Start horizontal value, 140nS increment
 
-SPR0CTL EQU $dff142  ; Sprite 0 position and control data
-SPR1CTL EQU $dff14A  ; Sprite 1 position and control data
-SPR2CTL EQU $dff152  ; Sprite 2 position and control data
-SPR3CTL EQU $dff15A  ; Sprite 3 position and control data
-SPR4CTL EQU $dff162  ; Sprite 4 position and control data
-SPR5CTL EQU $dff16A  ; Sprite 5 position and control data
-SPR6CTL EQU $dff172  ; Sprite 6 position and control data
-SPR7CTL EQU $dff17A  ; Sprite 7 position and control data
+SPR0CTL EQU $142  ; Sprite 0 position and control data
+SPR1CTL EQU $14A  ; Sprite 1 position and control data
+SPR2CTL EQU $152  ; Sprite 2 position and control data
+SPR3CTL EQU $15A  ; Sprite 3 position and control data
+SPR4CTL EQU $162  ; Sprite 4 position and control data
+SPR5CTL EQU $16A  ; Sprite 5 position and control data
+SPR6CTL EQU $172  ; Sprite 6 position and control data
+SPR7CTL EQU $17A  ; Sprite 7 position and control data
 
-SPR0PTH EQU $dff120 ; Sprite 0 pointer (high 5 bits)
-SPR0PTL EQU $dff122 ; Sprite 0 pointer (low 15 bits)
-SPR1PTH EQU $dff124 ; Sprite 1 pointer (high 5 bits)
-SPR1PTL EQU $dff126 ; Sprite 1 pointer (low 15 bits)
-SPR2PTH EQU $dff128 ; Sprite 2 pointer (high 5 bits)
-SPR2PTL EQU $dff12A ; Sprite 2 pointer (low 15 bits)
-SPR3PTH EQU $dff12C ; Sprite 3 pointer (high 5 bits)
-SPR3PTL EQU $dff12E ; Sprite 3 pointer (low 15 bits)
-SPR4PTH EQU $dff130 ; Sprite 4 pointer (high 5 bits)
-SPR4PTL EQU $dff132 ; Sprite 4 pointer (low 15 bits)
-SPR5PTH EQU $dff134 ; Sprite 5 pointer (high 5 bits)
-SPR5PTL EQU $dff136 ; Sprite 5 pointer (low 15 bits)
-SPR6PTH EQU $dff138 ; Sprite 6 pointer (high 5 bits)
-SPR6PTL EQU $dff13A ; Sprite 6 pointer (low 15 bits)
-SPR7PTH EQU $dff13C ; Sprite 7 pointer (high 5 bits)
-SPR7PTL EQU $dff13E ; Sprite 7 pointer (low 15 bits)
+SPR0PTH EQU $120 ; Sprite 0 pointer (high 5 bits)
+SPR0PTL EQU $122 ; Sprite 0 pointer (low 15 bits)
+SPR1PTH EQU $124 ; Sprite 1 pointer (high 5 bits)
+SPR1PTL EQU $126 ; Sprite 1 pointer (low 15 bits)
+SPR2PTH EQU $128 ; Sprite 2 pointer (high 5 bits)
+SPR2PTL EQU $12A ; Sprite 2 pointer (low 15 bits)
+SPR3PTH EQU $12C ; Sprite 3 pointer (high 5 bits)
+SPR3PTL EQU $12E ; Sprite 3 pointer (low 15 bits)
+SPR4PTH EQU $130 ; Sprite 4 pointer (high 5 bits)
+SPR4PTL EQU $132 ; Sprite 4 pointer (low 15 bits)
+SPR5PTH EQU $134 ; Sprite 5 pointer (high 5 bits)
+SPR5PTL EQU $136 ; Sprite 5 pointer (low 15 bits)
+SPR6PTH EQU $138 ; Sprite 6 pointer (high 5 bits)
+SPR6PTL EQU $13A ; Sprite 6 pointer (low 15 bits)
+SPR7PTH EQU $13C ; Sprite 7 pointer (high 5 bits)
+SPR7PTL EQU $13E ; Sprite 7 pointer (low 15 bits)
 
-COLOR16 EQU $dff1a0
+COLOR16 EQU $1a0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; DMA (chip-ram) memory is 0x0 - 0x7FFFF
@@ -208,7 +208,7 @@ init:
   jsr -132(a6)  ; Forbid
 
   ; allow all sprites to collide with each other
-  move.b #$f0,CLXCON+1
+  move.b #$f0,BASEADD+CLXCON+1
 
   ; setup displayhardware to show a 640x200px 3 bitplanes playfield
   ; with zero horizontal scroll and zero modulos
@@ -403,10 +403,10 @@ main_loop:
 load_bpl:  ; d0 is the movement amount, d2 is the BPLxPTL, d3 is BPLxPTH
   ; a6 is the current copper address, d1 should be untouched
   move.w d2,(a6)+  ; LO-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
+  move.w d0,(a6)+    ; go into $0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
   swap d0
   move.w d3,(a6)+  ; HI-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $dff0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
+  move.w d0,(a6)+    ; go into $0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
   rts
 skip_load_bpl
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -579,7 +579,7 @@ after_blit:
   ;clr.w $100
 
   ; detect joystick left/right
-  ; move.w JOY1DAT,d2
+  ; move.w BASEADD+JOY1DAT,d2
   ; btst.l #9,d2
   ; bne move_left
   ; btst.l #1,d2
@@ -588,7 +588,7 @@ after_blit:
   ; jmp done_joy_left_right
 
   ; http://eab.abime.net/showthread.php?t=75779&page=3
-  move.l JOY0DAT,d0
+  move.l BASEADD+JOY0DAT,d0
   move.l d0,d1
   add.l d1,d1
   eor.l d0,d1
@@ -657,16 +657,16 @@ done_xy_test:
 
 ;;;;;;;;;;;;;;;;;;;;;;;
 collision_detection:
-  move.w CLXDAT,d0
+  move.w BASEADD+CLXDAT,d0
   ; ship bug collision
   btst.l #10,d0
   bne ship_bug_collision
   bra test_fireball_bug_collision
 ship_bug_collision:
-  move.l #explosion_audio_data,AUD0LCH
-  move.w #end_explosion_audio_data-explosion_audio_data,AUD0LEN
-  move.w #447,AUD0PER
-  move.w #60,AUD0VOL
+  move.l #explosion_audio_data,BASEADD+AUD0LCH
+  move.w #end_explosion_audio_data-explosion_audio_data,BASEADD+AUD0LEN
+  move.w #447,BASEADD+AUD0PER
+  move.w #60,BASEADD+AUD0VOL
   move.w #1,audio0   ; stop whatever is playing
   move.w #1,audio0+2 ; start this next
   move.w #70,audio0+4   ; play this for this long
@@ -717,10 +717,10 @@ test_enemy_collision_return:
   cmp.b #$1,d0
   bne done_enemy_collision
   ; there was a collision, play a sound effect and start an explosion animation
-  move.l #bug_death_audio_data,AUD0LCH
-  move.w #end_bug_death_audio_data-bug_death_audio_data,AUD0LEN
-  move.w #447,AUD0PER
-  move.w #60,AUD0VOL
+  move.l #bug_death_audio_data,BASEADD+AUD0LCH
+  move.w #end_bug_death_audio_data-bug_death_audio_data,BASEADD+AUD0LEN
+  move.w #447,BASEADD+AUD0PER
+  move.w #60,BASEADD+AUD0VOL
   move.w #1,audio0   ; stop whatever is playing
   move.w #1,audio0+2 ; start this next
   move.w #70,audio0+4   ; play this for this long
@@ -843,13 +843,13 @@ shoot_fireball:
   add.w #12,4(a0)  ; offset the start position to so fire from middle of ship
   add.w #8,4(a0)  ; add height of fireball
   ; play shoot sound
-  move.l #shoot_audio_data,AUD0LCH
-  move.w #end_shoot_audio_data-shoot_audio_data,AUD0LEN
-  ;move.w #3000,AUD0LEN
-  move.w #447,AUD0PER
-  ; move.w #%111111,AUD0VOL
-  ; move.w #$20,AUD0VOL
-  move.w #60,AUD0VOL
+  move.l #shoot_audio_data,BASEADD+AUD0LCH
+  move.w #end_shoot_audio_data-shoot_audio_data,BASEADD+AUD0LEN
+  ;move.w #3000,BASEADD+AUD0LEN
+  move.w #447,BASEADD+AUD0PER
+  ; move.w #%111111,BASEADD+AUD0VOL
+  ; move.w #$20,BASEADD+AUD0VOL
+  move.w #60,BASEADD+AUD0VOL
   move.w #1,audio0   ; stop whatever is playing
   move.w #1,audio0+2 ; start this next
   move.w #33,audio0+4   ; play this for this long
@@ -1007,14 +1007,14 @@ wait_vertical_blank:
   ; setup sprite registers, have to be setup every vblank
   ; TODO(lucasw) but this isn't the vblank?  or it is still vblank
   ; because before jumping to mainloop there was a wait for vblank.
-  move.l #SHIP_DST,SPR0PTH     ; Sprite 0 pointer = $25000 actually used sprite
-  move.l #DUMMY_DST,SPR1PTH     ; Sprite 1 pointer = $30000 dummy sprite
-  move.l fireball0+12,SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
-  move.l fireball1+12,SPR3PTH     ; Sprite 2 pointer = $25000 actually used sprite
-  move.l #BUG1_DST,SPR4PTH
-  move.l #BUG2_DST,SPR5PTH
-  move.l #DUMMY_DST,SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
-  move.l #DUMMY_DST,SPR7PTH     ; Sprite 7 pointer = $25000 actually used sprite
+  move.l #SHIP_DST,BASEADD+SPR0PTH     ; Sprite 0 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,BASEADD+SPR1PTH     ; Sprite 1 pointer = $30000 dummy sprite
+  move.l fireball0+12,BASEADD+SPR2PTH     ; Sprite 2 pointer = $25000 actually used sprite
+  move.l fireball1+12,BASEADD+SPR3PTH     ; Sprite 2 pointer = $25000 actually used sprite
+  move.l #BUG1_DST,BASEADD+SPR4PTH
+  move.l #BUG2_DST,BASEADD+SPR5PTH
+  move.l #DUMMY_DST,BASEADD+SPR6PTH     ; Sprite 6 pointer = $25000 actually used sprite
+  move.l #DUMMY_DST,BASEADD+SPR7PTH     ; Sprite 7 pointer = $25000 actually used sprite
 
 ;;;;
 ; TODO(lucasw) may not want the blitting done here, wait for vblank instead? or some other time?
