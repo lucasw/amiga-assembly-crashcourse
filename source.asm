@@ -152,7 +152,45 @@ SPR6PTL EQU $13A ; Sprite 6 pointer (low 15 bits)
 SPR7PTH EQU $13C ; Sprite 7 pointer (high 5 bits)
 SPR7PTL EQU $13E ; Sprite 7 pointer (low 15 bits)
 
+; colors
+; playfield 1
+COLOR00 EQU $180
+COLOR01 EQU $182
+COLOR02 EQU $184
+COLOR03 EQU $186
+COLOR04 EQU $188
+COLOR05 EQU $18a
+COLOR06 EQU $18c
+COLOR07 EQU $18e
+COLOR08 EQU $190
+COLOR09 EQU $192
+COLOR10 EQU $194
+COLOR11 EQU $196
+COLOR12 EQU $198
+COLOR13 EQU $19a
+COLOR14 EQU $19c
+COLOR15 EQU $19e
+; sprite 0,1
 COLOR16 EQU $1a0
+COLOR17 EQU $1a2
+COLOR18 EQU $1a4
+COLOR19 EQU $1a6
+; sprite 2,3
+COLOR20 EQU $1a8
+COLOR21 EQU $1aa
+COLOR22 EQU $1ac
+COLOR23 EQU $1ae
+; sprite 4,5
+COLOR24 EQU $1b0
+COLOR25 EQU $1b2
+COLOR26 EQU $1b4
+COLOR27 EQU $1b6
+; sprite 6,7
+COLOR28 EQU $1b8
+COLOR29 EQU $1ba
+COLOR30 EQU $1bc
+COLOR31 EQU $1be
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; DMA (chip-ram) memory is 0x0 - 0x7FFFF
@@ -414,38 +452,40 @@ skip_load_bpl
   ; colors, last 3 characters/12 bits are rgb
   ; TODO(lucasw) replace with inc() command to get externally generated palett
   ; playfield 1 - foreground mountains
-  move.l #$01800000,(a6)+  ; color 0
-  move.l #$01820000,(a6)+  ; color 1
-  move.l #$01840235,(a6)+  ; color 2
-  move.l #$01860e01,(a6)+  ; color 3
-  move.l #$01880545,(a6)+  ; color 4
-  move.l #$018a0a36,(a6)+  ; color 5
-  move.l #$018c0569,(a6)+  ; color 6
-  move.l #$018e0b83,(a6)+  ; color 7
+  ;move.w #COLOR00,(a6)+
+  ;move.w $0000,(a6)+
+  move.l #COLOR00<<16+$0000,(a6)+
+  move.l #COLOR01<<16+$0000,(a6)+
+  move.l #COLOR02<<16+$0235,(a6)+  ; color 2
+  move.l #COLOR03<<16+$0e01,(a6)+  ; color 3
+  move.l #COLOR04<<16+$0545,(a6)+  ; color 4
+  move.l #COLOR05<<16+$0a36,(a6)+  ; color 5
+  move.l #COLOR06<<16+$0569,(a6)+  ; color 6
+  move.l #COLOR07<<16+$0b83,(a6)+  ; color 7
   ; playfield 2 - background sky
-  move.l #$01900000,(a6)+  ; color 8
-  move.l #$01920fff,(a6)+  ; color 9
-  move.l #$01940112,(a6)+  ; color 10
-  move.l #$01960324,(a6)+  ; color 11
-  move.l #$01980446,(a6)+  ; color 12
-  move.l #$019a0545,(a6)+  ; color 13
-  move.l #$019c0946,(a6)+  ; color 14
-  move.l #$019e0659,(a6)+  ; color 15
+  move.l #COLOR08<<16+$0000,(a6)+  ; color 8
+  move.l #COLOR09<<16+$0fff,(a6)+  ; color 9
+  move.l #COLOR10<<16+$0112,(a6)+  ; color 10
+  move.l #COLOR11<<16+$0324,(a6)+  ; color 11
+  move.l #COLOR12<<16+$0446,(a6)+  ; color 12
+  move.l #COLOR13<<16+$0545,(a6)+  ; color 13
+  move.l #COLOR14<<16+$0946,(a6)+  ; color 14
+  move.l #COLOR15<<16+$0659,(a6)+  ; color 15
   ; sprite 0,1 - the ship
-  move.l #$01a00000,(a6)+  ; color 16
-  move.l #$01a20300,(a6)+  ; color 17
-  move.l #$01a40b43,(a6)+  ; color 18
-  move.l #$01a60d98,(a6)+  ; color 19
+  move.l #COLOR16<<16+$0000,(a6)+  ; color 16
+  move.l #COLOR17<<16+$0300,(a6)+  ; color 17
+  move.l #COLOR18<<16+$0b43,(a6)+  ; color 18
+  move.l #COLOR19<<16+$0d98,(a6)+  ; color 19
   ; sprite 2,3 the fireball
-  move.l #$01a80000,(a6)+  ; color 20
-  move.l #$01aa0fd0,(a6)+  ; color 21
-  move.l #$01ac0ffc,(a6)+  ; color 22
-  move.l #$01ae0fff,(a6)+  ; color 23
+  move.l #COLOR20<<16+$0000,(a6)+  ; color 20
+  move.l #COLOR21<<16+$0fd0,(a6)+  ; color 21
+  move.l #COLOR22<<16+$0ffc,(a6)+  ; color 22
+  move.l #COLOR23<<16+$0fff,(a6)+  ; color 23
   ; sprite 4,5 - bugs
-  move.l #$01b00000,(a6)+  ; color 25
-  move.l #$01b20437,(a6)+  ; color 26
-  move.l #$01b4084a,(a6)+  ; color 27
-  move.l #$01b606ab,(a6)+  ; color 29
+  move.l #COLOR24<<16+$0000,(a6)+  ; color 25
+  move.l #COLOR25<<16+$0437,(a6)+  ; color 26
+  move.l #COLOR26<<16+$084a,(a6)+  ; color 27
+  move.l #COLOR27<<16+$06ab,(a6)+  ; color 29
   ; sprite 6,7 - bugs?
   ; TODO(lucasw) fill these colors in
   ; TODO(lucasw) unless wanting to cycle colors, could store the address
