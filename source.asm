@@ -75,19 +75,21 @@ CLXCON   EQU  $dff098  ; collision control
 CLXCON2  EQU  $dff10e  ; collision control
 CLXDAT   EQU  $dff00e  ; collision detection
 
-BPLCON0    EQU             $dff100
-BPLCON1    EQU             $dff102
-BPLCON2    EQU             $dff104
-BPL1MOD    EQU             $dff108
-BPL2MOD    EQU             $dff10a
+; the 000 is dropped for use in the copper
+BPLCON0    EQU             $100
+BPLCON1    EQU             $102
+BPLCON2    EQU             $104
+BPL1MOD    EQU             $108
+BPL2MOD    EQU             $10a
 DIWSTRT    EQU             $dff08e
 DIWSTOP    EQU             $dff090
 DDFSTRT    EQU             $dff092
 DDFSTOP    EQU             $dff094
 VPOSR      EQU             $dff004
 COP1LCH    EQU             $dff080
+; how is this used?
+COP2LCH    EQU             $dff084
 
-; the 000 is dropped for use in the copper
 BPL1PTH EQU $0e0 ; Bit plane 1 pointer (high 5 bits)
 BPL1PTL EQU $0e2 ; Bit plane 1 pointer (low 15 bits)
 BPL2PTH EQU $0e4 ; Bit plane 2 pointer (high 5 bits)
@@ -211,20 +213,20 @@ init:
   ; setup displayhardware to show a 640x200px 3 bitplanes playfield
   ; with zero horizontal scroll and zero modulos
   ; move.w #$3200,BPLCON0      ; three bitplanes, single playfield
-  move.w #$6600,BPLCON0      ; three bitplanes, dual playfield
-  move.w #$0000,BPLCON1      ; horizontal scroll 0
+  move.w #$6600,BASEADD+BPLCON0      ; three bitplanes, dual playfield
+  move.w #$0000,BASEADD+BPLCON1      ; horizontal scroll 0
   ; move.w BPLCON2,d0  ; moving BPLCON2 seems to change it
-  move.b #$1f,BPLCON2      ; priority
+  move.b #$1f,BASEADD+BPLCON2      ; priority
 
-  ; move.w #$0004,BPLCON2      ; priority
+  ; move.w #$0004,BASEADD+BPLCON2      ; priority
   ; horizontal arrangement- given that the 3 color channels are on one row
   ; bplmod = (width of the playfield * (num bitplanes) - width screen) / 8
   ; move.w #$00c8,BPL1MOD      ; odd modulo
   ; move.w #$00c8,BPL2MOD      ; even modulo
   ; vertical arrangement
   ; bplmod = (width of the playfield - width screen) / 8
-  move.w #(PF_WIDTH-SCREEN_WIDTH)/8,BPL1MOD      ; odd modulo
-  move.w #(PF_WIDTH-SCREEN_WIDTH)/8,BPL2MOD      ; even modulo
+  move.w #(PF_WIDTH-SCREEN_WIDTH)/8,BASEADD+BPL1MOD      ; odd modulo
+  move.w #(PF_WIDTH-SCREEN_WIDTH)/8,BASEADD+BPL2MOD      ; even modulo
   move.w #$2c91,DIWSTRT      ; DIWSTRT - topleft corner (2c81)
   move.w #$f8c1,DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
   move.w #$0038,DDFSTRT      ; DDFSTRT
@@ -467,7 +469,7 @@ skip_load_bpl
     lsl.l #4,d4
     add.l d4,d5
     ; Add horizontal offset to copperlist - BPLCON1
-    move.w #$0102,(a6)+
+    move.w #BPLCON1,(a6)+
     move.w d5,(a6)+
     ; Proceed to next row that we want to offset
     add.l #$500,d1
@@ -479,7 +481,7 @@ skip_load_bpl
 
   ; scroll every row the same
   ; the mountains
-  move.w #$0102,(a6)+  ; BPLCON1
+  move.w #BPLCON1,(a6)+  ; BPLCON1
   move.l pf_scroll_x,d2
   and.w #$000f,d2  ; only take last four bits for scroll within 1 byte
   move.w #$f,d3
@@ -549,9 +551,9 @@ skip_load_bpl
   move.w BLTDPTL,(a6)+
   move.w 2(a0),(a6)+
 
-  ; this triggers the blit, but it screws up and requires a restart currently
-  ;move.w #$0102,BLTSIZE  ; height shifted 6 bits left + last 6 bits for width in words
-  move.w #BLTSIZE,(a6)+  ; height shifted 6 bits left + last 6 bits for width in words
+  ; these two are supposed to trigger the blit, but nothing is happening currently
+  move.w #BLTSIZE,(a6)+
+  ; height shifted 6 bits left + last 6 bits for width in words
   move.w #32*64+32/16,(a6)+
 after_blit:
 
@@ -996,11 +998,11 @@ update_scroll:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Wait for vertical blanking before taking the copper list into use
-waitVB:
+wait_vertical_blank:
   move.l VPOSR,d0
   and.l #$1ff00,d0
   cmp.l #300<<8,d0
-  bne waitVB
+  bne wait_vertical_blank
 
   ; setup sprite registers, have to be setup every vblank
   ; TODO(lucasw) but this isn't the vblank?  or it is still vblank
@@ -1051,7 +1053,7 @@ update_sprite_registers:
 
   ; Take copper list into use - but only after above updates have been made?
   move.l #copper_list,a6
-  move.l a6,COP1LCH
+  move.l a6,COP1LCH  ; this is automatically used at beginning of each vertical blank
 
 skip4:
   ;sub.b #1,BUG1_DST+1
