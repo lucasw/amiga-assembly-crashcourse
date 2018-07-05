@@ -5,29 +5,31 @@ ADKCONR    EQU    $dff010
 INTENAR    EQU    $dff01c
 INTREQR    EQU    $dff01e
 
-BLTCON0  EQU $dff040
-BLTCON1  EQU $dff041
-BLTAFWM  EQU $dff044
-BLTALWM  EQU $dff046
+BASEADD  EQU $dff000
+; TODO(lucasw) to store without the dff so that the copper list can use them.
+BLTCON0  EQU $040
+BLTCON1  EQU $041
+BLTAFWM  EQU $044
+BLTALWM  EQU $046
 
-BLTCPTH  EQU $dff048
-BLTCPTL  EQU $dff04a
-BLTBPTH  EQU $dff04c
-BLTBPTL  EQU $dff04e
-BLTAPTH  EQU $dff050
-BLTAPTL  EQU $dff052
-BLTDPTH  EQU $dff054
-BLTDPTL  EQU $dff056
+BLTCPTH  EQU $048
+BLTCPTL  EQU $04a
+BLTBPTH  EQU $04c
+BLTBPTL  EQU $04e
+BLTAPTH  EQU $050
+BLTAPTL  EQU $052
+BLTDPTH  EQU $054
+BLTDPTL  EQU $056
 
-BLTSIZE  EQU $dff058
+BLTSIZE  EQU $058
 ; AGA only
-;BLTSIZV  EQU $dff05c
-;BLTSIZH  EQU $dff05e
+;BLTSIZV  EQU $05c
+;BLTSIZH  EQU $05e
 
-BLTCMOD  EQU $dff060  ; modulo source C
-BLTBMOD  EQU $dff062  ; modulo source B
-BLTAMOD  EQU $dff064  ; modulo source A
-BLTDMOD  EQU $dff066  ; modulo destination D
+BLTCMOD  EQU $060  ; modulo source C
+BLTBMOD  EQU $062  ; modulo source B
+BLTAMOD  EQU $064  ; modulo source A
+BLTDMOD  EQU $066  ; modulo destination D
 
 ; DMACON
 ;15  SET/CLR Set/Clear control bit. Determines if bits
@@ -496,8 +498,66 @@ skip_load_bpl
   add.w d4,d3
   move.w d3,(a6)+
 
+  ; blitter - TODO(lucasw) is this a good place in the frame to do this?
+  ; TODO(lucasw) do it all in the copper list
+  ; instead of an animation just a single frame for now
+  ;bsr blit_wait
+  ;cmp.b #1,do_blit
+  ;bne.b after_blit
+  ;move.b #0,do_blit
+  ; bsr blit_wait only the cpu has to do a blit_wait?
+
+  move.w #BLTCON0,(a6)+
+  move.w #$09f0,(a6)+
+  move.w #BLTCON1,(a6)+
+  move.w #$0000,(a6)+
+
+  move.w #BLTAFWM,(a6)+
+  move.w #$ffff,(a6)+
+  move.w #BLTALWM,(a6)+
+  move.w #$ffff,(a6)+
+  move.w #BLTAMOD,(a6)+  ; A modulo : vertical arrangement so set to zero
+  move.w #0,(a6)+
+  move.w #BLTDMOD,(a6)+  ; D modulo : playfield width/8-blitwidth*2
+  move.w #(PF_WIDTH-32)/8,(a6)+
+
+  move.l #explosion_data,a0
+  move.w #BLTAPTH,(a6)+
+  move.l (a0),(a6)+
+  move.w #BLTAPTL,(a6)+
+  move.w 2(a0),(a6)+
+
+  ; calculate byte offset into mountains_data
+  ;clr.l d0
+  ;add.w 2(a0),d0  ; x position for the explosion
+  ;clr.l d1
+  ;add.w (a0),d1  ; y position for the explosion
+  ;mulu.w #PF_WIDTH/8,d1
+  ;add.l d0,d1
+  ;move.l #mountains_data,d2
+  ;add.l d1,d2
+  ;move.l pf_scroll_x,d3
+  ;lsr.l #3,d3  ; only want byte address, worry about pixel offsets later
+  ;add.l d3,d2
+  ;move.l d2,BLTDPTH
+  ; width and height
+  ; height is in lines, width is in words
+  move.l #mountains_data,a0
+  add.l #$20,(a0)
+  move.w BLTDPTH,(a6)+
+  move.w (a0),(a6)+
+  move.w BLTDPTL,(a6)+
+  move.w 2(a0),(a6)+
+
+  ; this triggers the blit, but it screws up and requires a restart currently
+  ;move.w #$0102,BLTSIZE  ; height shifted 6 bits left + last 6 bits for width in words
+  move.w #BLTSIZE,(a6)+  ; height shifted 6 bits left + last 6 bits for width in words
+  move.w #32*64+32/16,(a6)+
+after_blit:
+
   ; end of copperlist
   move.l #$fffffffe,(a6)+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   ; detect key press, use special keys for now
   ;cmp.b #$37,SKEYS  ; shift left
@@ -662,36 +722,8 @@ test_enemy_collision_return:
   move.w #1,audio0   ; stop whatever is playing
   move.w #1,audio0+2 ; start this next
   move.w #70,audio0+4   ; play this for this long
-  ; blitter - TODO(lucasw) is this a good place in the frame to do this?
-  ; TODO(lucasw) do it all in the copper list
-  ; instead of an animation just a single frame for now
-  ;bsr blit_wait
-  move.l #$09f00000,BLTCON0
-  move.l #$ffffffff,BLTAFWM
-  move.w #0,BLTAMOD  ; A modulo : vertical arrangement so set to zero
-  move.w #(PF_WIDTH-32)/8,BLTDMOD  ; D modulo : playfield width/8-blitwidth*2
-  move.l #explosion_data,BLTAPTH
-  ; calculate byte offset into mountains_data
-  ;clr.l d0
-  ;add.w 2(a0),d0  ; x position for the explosion
-  ;clr.l d1
-  ;add.w (a0),d1  ; y position for the explosion
-  ;mulu.w #PF_WIDTH/8,d1
-  ;add.l d0,d1
-  ;move.l #mountains_data,d2
-  ;add.l d1,d2
-  ;move.l pf_scroll_x,d3
-  ;lsr.l #3,d3  ; only want byte address, worry about pixel offsets later
-  ;add.l d3,d2
-  ;move.l d2,BLTDPTH
-  ; width and height
-  ; height is in lines, width is in words
-  move.l #mountains_data,BLTDPTH
+  move.l (a0),blit_yx
   move.b #1,do_blit
-  ; this triggers the blit, but it screws up and requires a restart currently
-  ;move.w #32*64+32/16,BLTSIZE  ; height shifted 6 bits left + last 6 bits for width in words
-  ;move.w #$0102,BLTSIZE  ; height shifted 6 bits left + last 6 bits for width in words
-skip_blit:
 
   ; move the enemy off screen
   move.w #$100,2(a0)  ; x1
@@ -984,22 +1016,14 @@ waitVB:
 
 ;;;;
 ; TODO(lucasw) may not want the blitting done here, wait for vblank instead? or some other time?
-  bra skip_blit_wait
-blit_wait:
-  tst DMACONR  ; A1000 compatibility
-  .waitblit:
-    btst #6,DMACONR
-    bne.s .waitblit
-    rts
-skip_blit_wait:
-
-  bra after_blit  ; disable the blit
-  cmp.b #1,do_blit
-  bne.b after_blit
-  move.b #0,do_blit
-  bsr blit_wait
-  move.w #32*64+32/16,BLTSIZE  ; height shifted 6 bits left + last 6 bits for width in words
-after_blit:
+;  bra skip_blit_wait
+;blit_wait:
+;  tst DMACONR  ; A1000 compatibility
+;  .waitblit:
+;    btst #6,DMACONR
+;    bne.s .waitblit
+;    rts
+;skip_blit_wait:
 
 ;;;;;;;;;;;;;;;;
 ; seems like this should be done during vblank unless re-using sprites
@@ -1080,6 +1104,9 @@ frame:
 pf_scroll_x:
   dc.l 0
   CNOP 0,4
+blit_yx
+  dc.w 0  ; y
+  dc.w 0  ; x
 do_blit:
   dc.b 0
   CNOP 0,4
@@ -1255,5 +1282,5 @@ end_bug_death_audio_data:
 
 copper_list:
   dc.l $ffffffe ; end of copper list
-  blk.l 1023,0
+  blk.l 1023,0  ; allocate 1023 instructions?
 
