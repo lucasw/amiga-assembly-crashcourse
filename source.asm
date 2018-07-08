@@ -269,8 +269,9 @@ init:
 ;02  AUD2EN  Audio channel 2 DMA enable
 ;01  AUD1EN  Audio channel 1 DMA enable
 ;00  AUD0EN  Audio channel 0 DMA enable
-  move.w #%1000000111100000,BASEADD+DMACON  ; DMA set ON
-  move.w #%0000000001011111,BASEADD+DMACON  ; DMA set OFF
+  ;move.w #%1000000111100000,BASEADD+DMACON  ; DMA set ON
+  move.w #%1000000100000000,BASEADD+DMACON  ; DMA set ON
+  move.w #%0000000000011111,BASEADD+DMACON  ; DMA set OFF
   move.w #%1100000000000000,BASEADD+INTENA  ; IRQ set ON
   move.w #%0011111111111111,BASEADD+INTENA  ; IRQ set OFF
 
@@ -380,24 +381,30 @@ copy_data:
   move.l #$00000000,DUMMY_DST
 skip_copy_data:
 
+  ; set up all blit sources with valid address, even if not used
+  move.l #sky_data,BLTAPTH
+  move.l #sky_data,BLTBPTH
+  move.l #sky_data,BLTCPTH
+  move.l #sky_data,BLTDPTH
+
   ; trying the blit here results in no changes on screen, but
   ; the system crashes after exiting the program.
-  bra skip_blit
+  ;bra skip_blit
 test_blit:
   ;move.w #$8040,DMACON
 ; doa single blit before entering the main loop
 bltx = 16/8  ; byte not pixel position
 blty = 32
 blth = 16
-bltw = 128/8
+bltw = 128
   jsr blit_wait
   move.l #$01ff0000,BLTCON0
   move.l #mountains_data+PF_WIDTH/8*blty+bltx,BLTDPTH
   ;move.l #sky_data+PF_WIDTH*bltx+blty,BLTDPTH
-  move.l #PF_WIDTH/8-bltw,BLTDMOD
-  move.l #blth*64+bltw*2,BLTSIZE  ; bltw needs word size, not byte size
+  move.l #(PF_WIDTH-bltw)/8,BLTDMOD
+  move.l #blth*64+bltw/16,BLTSIZE  ; bltw needs word size, not byte size
   ;jsr blit_wait
-  rts
+  ;rts
 skip_blit:
 
 main_loop:
@@ -1071,7 +1078,7 @@ wait_vertical_blank:
   bne wait_vertical_blank
 
   ; this crashes the amiga on exit, also doesn't draw anything
-  ; jsr test_blit
+  ;jsr test_blit
 
   ; setup sprite registers, have to be setup every vblank
   ; TODO(lucasw) but this isn't the vblank?  or it is still vblank
