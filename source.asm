@@ -31,29 +31,6 @@ BLTBMOD  EQU $062  ; modulo source B
 BLTAMOD  EQU $064  ; modulo source A
 BLTDMOD  EQU $066  ; modulo destination D
 
-; DMACON
-;15  SET/CLR Set/Clear control bit. Determines if bits
-;written with a 1 get set or cleared
-;Bits written with a zero are unchanged
-;14  BBUSY Blitter busy status bit (read only)
-;13  BZERO Blitter logic zero status bit (read only)
-;12  X
-;11  X
-;10  BLTPRI  Blitter DMA priority (over CPU micro)
-;(also called "blitter nasty")
-;(disables /BLS pin, preventing micro
-;from stealing any bus cycles while
-;blitter DMA is running)
-;09  DMAEN Enable all DMA below (also UHRES DMA)
-;08  BPLEN Bit plane DMA enable
-;07  COPEN Coprocessor DMA enable
-;06  BLTEN Blitter DMA enable
-;05  SPREN Sprite DMA enable
-;04  DSKEN Disk DMA enable
-;03  AUD3EN  Audio channel 3 DMA enable
-;02  AUD2EN  Audio channel 2 DMA enable
-;01  AUD1EN  Audio channel 1 DMA enable
-;00  AUD0EN  Audio channel 0 DMA enable
 DMACON    EQU    $096
 ADKCON    EQU    $09e
 INTENA    EQU    $09a
@@ -269,7 +246,30 @@ init:
   move.w #$f8c1,BASEADD+DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
   move.w #$0038,BASEADD+DDFSTRT      ; DDFSTRT
   move.w #$00d0,BASEADD+DDFSTOP      ; DDFSTOP
-  move.w #%1000000110100000,BASEADD+DMACON  ; DMA set ON
+; DMACON
+;15  SET/CLR Set/Clear control bit. Determines if bits
+;written with a 1 get set or cleared
+;Bits written with a zero are unchanged
+;14  BBUSY Blitter busy status bit (read only)
+;13  BZERO Blitter logic zero status bit (read only)
+;12  X
+;11  X
+;10  BLTPRI  Blitter DMA priority (over CPU micro)
+;(also called "blitter nasty")
+;(disables /BLS pin, preventing micro
+;from stealing any bus cycles while
+;blitter DMA is running)
+;09  DMAEN Enable all DMA below (also UHRES DMA)
+;08  BPLEN Bit plane DMA enable
+;07  COPEN Coprocessor DMA enable
+;06  BLTEN Blitter DMA enable
+;05  SPREN Sprite DMA enable
+;04  DSKEN Disk DMA enable
+;03  AUD3EN  Audio channel 3 DMA enable
+;02  AUD2EN  Audio channel 2 DMA enable
+;01  AUD1EN  Audio channel 1 DMA enable
+;00  AUD0EN  Audio channel 0 DMA enable
+  move.w #%1000000111100000,BASEADD+DMACON  ; DMA set ON
   move.w #%0000000001011111,BASEADD+DMACON  ; DMA set OFF
   move.w #%1100000000000000,BASEADD+INTENA  ; IRQ set ON
   move.w #%0011111111111111,BASEADD+INTENA  ; IRQ set OFF
@@ -380,6 +380,26 @@ copy_data:
   move.l #$00000000,DUMMY_DST
 skip_copy_data:
 
+  ; trying the blit here results in no changes on screen, but
+  ; the system crashes after exiting the program.
+  bra skip_blit
+test_blit:
+  ;move.w #$8040,DMACON
+; doa single blit before entering the main loop
+bltx = 16/8  ; byte not pixel position
+blty = 32
+blth = 16
+bltw = 128/8
+  jsr blit_wait
+  move.l #$01ff0000,BLTCON0
+  move.l #mountains_data+PF_WIDTH/8*blty+bltx,BLTDPTH
+  ;move.l #sky_data+PF_WIDTH*bltx+blty,BLTDPTH
+  move.l #PF_WIDTH/8-bltw,BLTDMOD
+  move.l #blth*64+bltw*2,BLTSIZE  ; bltw needs word size, not byte size
+  ;jsr blit_wait
+  rts
+skip_blit:
+
 main_loop:
   ; increment frame count
   addq.l #1,frame
@@ -481,12 +501,12 @@ skip_load_bpl
   move.l #COLOR21<<16+$0fd0,(a6)+  ; color 21
   move.l #COLOR22<<16+$0ffc,(a6)+  ; color 22
   move.l #COLOR23<<16+$0fff,(a6)+  ; color 23
-  ; sprite 4,5 - bugs
+  ; sprite 4,5 - enemy bugs
   move.l #COLOR24<<16+$0000,(a6)+  ; color 25
   move.l #COLOR25<<16+$0437,(a6)+  ; color 26
   move.l #COLOR26<<16+$084a,(a6)+  ; color 27
   move.l #COLOR27<<16+$06ab,(a6)+  ; color 29
-  ; sprite 6,7 - bugs?
+  ; sprite 6,7 - enemy bugs?
   ; TODO(lucasw) fill these colors in
   ; TODO(lucasw) unless wanting to cycle colors, could store the address
   ; at end of static copper list and then use it below for dynamic copper list stuff?
@@ -542,6 +562,7 @@ skip_load_bpl
 
   ; blitter - TODO(lucasw) is this a good place in the frame to do this?
   ; TODO(lucasw) do it all in the copper list
+  bra after_blit  ; disable this copper blit for now
   ; instead of an animation just a single frame for now
   ;bsr blit_wait
   ;cmp.b #1,do_blit
@@ -550,7 +571,8 @@ skip_load_bpl
   ; bsr blit_wait only the cpu has to do a blit_wait?
 
   move.w #BLTCON0,(a6)+
-  move.w #$09f0,(a6)+
+  ; move.w #$09f0,(a6)+
+  move.w #$0100,(a6)+
   move.w #BLTCON1,(a6)+
   move.w #$0000,(a6)+
 
@@ -561,7 +583,11 @@ skip_load_bpl
   move.w #BLTAMOD,(a6)+  ; A modulo : vertical arrangement so set to zero
   move.w #0,(a6)+
   move.w #BLTDMOD,(a6)+  ; D modulo : playfield width/8-blitwidth*2
-  move.w #(PF_WIDTH-32)/8,(a6)+
+; blitw EQU 32
+blitw EQU 128
+blith EQU 32
+  ; move.w #(PF_WIDTH-32)/8,(a6)+
+  move.w #(PF_WIDTH-blitw)/8,(a6)+
 
   move.l #explosion_data,a0
   move.w #BLTAPTH,(a6)+
@@ -594,7 +620,7 @@ skip_load_bpl
   ; these two are supposed to trigger the blit, but nothing is happening currently
   move.w #BLTSIZE,(a6)+
   ; height shifted 6 bits left + last 6 bits for width in words
-  move.w #32*64+32/16,(a6)+
+  move.w #blith*64+blitw/16,(a6)+
 after_blit:
 
   ; end of copperlist
@@ -1044,6 +1070,9 @@ wait_vertical_blank:
   cmp.l #300<<8,d0
   bne wait_vertical_blank
 
+  ; this crashes the amiga on exit, also doesn't draw anything
+  ; jsr test_blit
+
   ; setup sprite registers, have to be setup every vblank
   ; TODO(lucasw) but this isn't the vblank?  or it is still vblank
   ; because before jumping to mainloop there was a wait for vblank.
@@ -1058,14 +1087,14 @@ wait_vertical_blank:
 
 ;;;;
 ; TODO(lucasw) may not want the blitting done here, wait for vblank instead? or some other time?
-;  bra skip_blit_wait
-;blit_wait:
-;  tst BASEADD+DMACONR  ; A1000 compatibility
-;  .waitblit:
-;    btst #6,BASEADD+DMACONR
-;    bne.s .waitblit
-;    rts
-;skip_blit_wait:
+  bra skip_blit_wait
+blit_wait:
+  tst BASEADD+DMACONR  ; A1000 compatibility
+  .waitblit:
+    btst #6,BASEADD+DMACONR
+    bne.s .waitblit
+    rts
+skip_blit_wait:
 
 ;;;;;;;;;;;;;;;;
 ; seems like this should be done during vblank unless re-using sprites
