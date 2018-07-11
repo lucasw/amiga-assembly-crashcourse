@@ -53,12 +53,12 @@ entry:
 
  move.w #(PLAYFIELD_BIT_DEPTH<<12)|$200,BPLCON0(a6)
  move.w #PLAYFIELD_WIDTH_BYTES-TC_WIDTH_BYTES,BLTDMOD(a6) ;D modulo
- ; where is BPL1MOD?
- ; using vertical memory arrangement- 32x96
+ ; using vertical memory arrangement- 640x600
+ move.w #(PLAYFIELD_WIDTH-SCREEN_WIDTH)/8,BPL1MOD(a6)
  ; move.w #PLAYFIELD_WIDTH_BYTES*PLAYFIELD_BIT_DEPTH-PLAYFIELD_WIDTH_BYTES,BPL2MOD(a6)
- move.w #0,BPL2MOD(a6)
+ move.w #(PLAYFIELD_WIDTH-SCREEN_WIDTH)/8,BPL2MOD(a6)
 
- ;; poke bitplane pointers
+ ;; poke bitplane pointers in copper list
  lea bitplanes(pc),a1
  lea     copper(pc),a2
  moveq #PLAYFIELD_BIT_DEPTH-1,d0
@@ -67,16 +67,26 @@ entry:
  move.w d1,2(a2)
  swap d1
  move.w  d1,6(a2)
- lea PLAYFIELD_WIDTH_BYTES(a1),a1 ; bit plane data is interleaved
+ ; lea PLAYFIELD_WIDTH_BYTES(a1),a1 ; bit plane data is interleaved
+ add.l #(PLAYFIELD_WIDTH_BYTES*PLAYFIELD_HEIGHT),a1 ; bit plane data is not interleaved
  addq #8,a2
  dbra d0,.bitplaneloop
 
  ;; install copper list, then enable dma and selected interrupts
  lea copper(pc),a0
  move.l a0,COP1LC(a6)
-  move.w  COPJMP1(a6),d0
- move.w #(DMAF_BLITTER|DMAF_SETCLR!DMAF_COPPER!DMAF_RASTER!DMAF_MASTER),DMACON(a6)
- move.w #(INTF_SETCLR|INTF_INTEN|INTF_EXTER),INTENA(a6)
+ move.w  COPJMP1(a6),d0
+ ; MASTER = DMAEN
+ ; RASTER = BPLEN
+ ; TODO(lucasw) what does ! mean below - if it means negate, then why not leave
+ ; out that entirely?
+ ;move.w #(DMAF_BLITTER|DMAF_SETCLR!DMAF_COPPER!DMAF_RASTER!DMAF_MASTER),DMACON(a6)
+ move.w #%1000000011100000,DMACON(a6)
+ move.w #$001f,DMACON(a6)
+ ; INTF_EXTR - is that needed?
+ ;move.w #(INTF_SETCLR|INTF_INTEN|INTF_EXTER),INTENA(a6)
+ move.w #%1100000000000000,INTENA(a6)  ; IRQ set ON
+ move.w #%0011111111111111,INTENA(a6)  ; IRQ set OFF
 
  bsr.s  doblit
 
@@ -85,12 +95,14 @@ entry:
  bsr.s  waitRaster
  bra.s .mainLoop
 
+; VPOSR is in registers.i but is defined as vposr, which I can't find
+VPOSRb      EQU             $004
 
 waitRaster:  ;wait for rasterline d0.w. Modifies d0-d2/a0.
  move.l #$1ff00,d2
  lsl.l #8,d0
  and.l d2,d0
- lea $dff004,a0
+ lea CUSTOM+VPOSRb,a0
 .wr: move.l (a0),d1
  and.l d2,d1
  cmp.l d1,d0
