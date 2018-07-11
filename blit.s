@@ -19,6 +19,7 @@ RASTER_Y_STOP  equ RASTER_Y_START+SCREEN_HEIGHT
   ;bra entry
 setup:
   ; copied from reactor source.asm - is it needed?
+  ; maybe only needed if want to exit back to workbench
   move.l $4,a6
   move.l #gfxname,a1
   moveq  #0,d0
@@ -55,6 +56,7 @@ entry:
  ;move.w #$00d0,DDFSTOP(a6)
 
  move.w #(PLAYFIELD_BIT_DEPTH<<12)|$200,BPLCON0(a6)
+ move.w #$1f,BPLCON1(a6)
  move.w #PLAYFIELD_WIDTH_BYTES-TC_WIDTH_BYTES,BLTDMOD(a6) ;D modulo
  ; using vertical memory arrangement- 640x600
  move.w #(PLAYFIELD_WIDTH-SCREEN_WIDTH)/8,BPL1MOD(a6)
@@ -62,7 +64,8 @@ entry:
  move.w #(PLAYFIELD_WIDTH-SCREEN_WIDTH)/8,BPL2MOD(a6)
 
  ;; poke bitplane pointers in copper list
- lea bitplanes(pc),a1
+ bra skip_bpl
+ ;lea bitplanes(pc),a1
  lea     copper(pc),a2
  moveq #PLAYFIELD_BIT_DEPTH-1,d0
 .bitplaneloop:
@@ -74,6 +77,7 @@ entry:
  add.l #(PLAYFIELD_WIDTH_BYTES*PLAYFIELD_HEIGHT),a1 ; bit plane data is not interleaved
  addq #8,a2
  dbra d0,.bitplaneloop
+skip_bpl:
 
  ; modify bitplane data for debug
  bra skip_modify_bpl
@@ -86,25 +90,39 @@ entry:
 skip_modify_bpl:
 
  ;; install copper list, then enable dma and selected interrupts
- lea copper(pc),a0
- move.l a0,COP1LC(a6)
- move.w  COPJMP1(a6),d0
+ ;lea copper(pc),a0
+ ;move.l a0,COP1LC(a6)
+ ;move.w  COPJMP1(a6),d0
  ; MASTER = DMAEN
  ; RASTER = BPLEN
  ; TODO(lucasw) what does ! mean below - if it means negate, then why not leave
  ; out that entirely?
  ;move.w #(DMAF_BLITTER|DMAF_SETCLR!DMAF_COPPER!DMAF_RASTER!DMAF_MASTER),DMACON(a6)
+ ; 8 BPLEN
+ ; 7 COPEN
+ ; 6 BLTEN
+ ; 5 SPREN
  ;        fedcba9876543210
- move.w #%1000000111000000,DMACON(a6)
- move.w #$001f,DMACON(a6)
+ move.w #%1000000100000000,DMACON(a6)
+ move.w #%0000000011111111,DMACON(a6)
  ; INTF_EXTR - is that needed?
  ;move.w #(INTF_SETCLR|INTF_INTEN|INTF_EXTER),INTENA(a6)
  move.w #%1100000000000000,INTENA(a6)  ; IRQ set ON
  move.w #%0011111111111111,INTENA(a6)  ; IRQ set OFF
 
- bsr.s  doblit
+ ;bsr.s  doblit
 
 .mainLoop:
+ ; vertical blank is happening at start of main loop
+
+ ; alternate bitplane register loading, has to be done during every vertical blank
+ ; by cpu or copper, so using cpu here
+;bpl_set:
+ move.l #bitplanes,BPL1PTH(a6)
+ move.l #bitplanes+16000,BPL2PTH(a6)
+ move.l #bitplanes+32000,BPL3PTH(a6)
+;skip_bpl_set:
+
  add.l #1,frame
  move.l frame,d0
  lsr.l #3,d0
@@ -113,7 +131,7 @@ skip_modify_bpl:
  move.w  #$02a,d0  ;wait for EOFrame
  bsr.s  waitRaster
  ;bsr.s  wait_vertical_blank
- bra.s .mainLoop
+ bra .mainLoop
 
 ; VPOSR is in registers.i but is defined as vposr, which I can't find
 VPOSRb      EQU             $004
@@ -212,6 +230,13 @@ frame:
  dc.l 0
  CNOP 0,4
 
+; because of the Section below, all the memory below will also be in ChipRAM
+gfxbase: dc.l 0 ; TODO(lucasw) moved this from other misc register above, does it matter?
+gfxname:
+  dc.b 'graphics.library',0
+  Section ChipRAM,Data_c
+  CNOP 0,4
+
 bitplanes:
  incbin "gimp/sky.data.raw"
  ;incbin "gimp/mountains.data.raw"
@@ -221,8 +246,3 @@ tc:
  incbin "gimp/explosion.data.raw"
  CNOP 0,4
 
-gfxbase: dc.l 0 ; TODO(lucasw) moved this from other misc register above, does it matter?
-gfxname:
-  dc.b 'graphics.library',0
-  Section ChipRAM,Data_c
-  CNOP 0,4
