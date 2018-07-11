@@ -55,8 +55,10 @@ entry:
  ;move.w #$0038,DDFSTRT(a6)
  ;move.w #$00d0,DDFSTOP(a6)
 
+ ; the $200 enables coolor
  move.w #(PLAYFIELD_BIT_DEPTH<<12)|$200,BPLCON0(a6)
- move.w #$1f,BPLCON1(a6)
+ move.w #$0000,BPLCON1(a6)  ; no scroll
+ move.w #$003f,BPLCON2(a6)  ; priority
  move.w #PLAYFIELD_WIDTH_BYTES-TC_WIDTH_BYTES,BLTDMOD(a6) ;D modulo
  ; using vertical memory arrangement- 640x600
  move.w #(PLAYFIELD_WIDTH-SCREEN_WIDTH)/8,BPL1MOD(a6)
@@ -113,16 +115,21 @@ skip_modify_bpl:
  ;bsr.s  doblit
 
 .mainLoop:
- ; vertical blank is happening at start of main loop
+ ; vertical blank is happening at start of main loop,
+ ; but with enough code here need to know when it is over
 
  ; alternate bitplane register loading, has to be done during every vertical blank
  ; by cpu or copper, so using cpu here
 ;bpl_set:
- move.l #bitplanes,BPL1PTH(a6)
- move.l #bitplanes+16000,BPL2PTH(a6)
- move.l #bitplanes+32000,BPL3PTH(a6)
+ move.l #bitplanes,BPL1PT(a6)
+ move.l #bitplanes+16000,BPL2PT(a6)
+ move.l #bitplanes+32000,BPL3PT(a6)
+ move.l #bitplanes,BPL4PT(a6)
+ move.l #bitplanes+16000,BPL5PT(a6)
+ move.l #bitplanes+32000,BPL6PT(a6)
 ;skip_bpl_set:
 
+ ; cycle background color to see something happening
  add.l #1,frame
  move.l frame,d0
  lsr.l #3,d0
