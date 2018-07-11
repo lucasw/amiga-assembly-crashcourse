@@ -1,4 +1,4 @@
-  move.w #$111,COLOR00(a6)
+  move.w #$141,COLOR00(a6)
   move.w #$631,COLOR01(a6)
   move.w #$752,COLOR02(a6)
   move.w #$e96,COLOR03(a6)

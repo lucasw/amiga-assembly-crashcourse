@@ -16,7 +16,9 @@ SCREEN_HEIGHT equ 256
 RASTER_X_STOP  equ RASTER_X_START+SCREEN_WIDTH
 RASTER_Y_STOP  equ RASTER_Y_START+SCREEN_HEIGHT
 
-entry:
+  ;bra entry
+setup:
+  ; copied from reactor source.asm - is it needed?
   move.l $4,a6
   move.l #gfxname,a1
   moveq  #0,d0
@@ -33,6 +35,7 @@ entry:
   move.l $4,a6
   jsr -132(a6)  ; Forbid
 
+entry:
 
  ;; custom chip base globally in a6
  lea  CUSTOM,a6
@@ -72,6 +75,16 @@ entry:
  addq #8,a2
  dbra d0,.bitplaneloop
 
+ ; modify bitplane data for debug
+ bra skip_modify_bpl
+ move.l #$fa0,d0
+ move.l #bitplanes,a1
+.drawbpl:
+ move.l d0,(a1)
+ add.l #4,a1
+ dbra d0,.drawbpl
+skip_modify_bpl:
+
  ;; install copper list, then enable dma and selected interrupts
  lea copper(pc),a0
  move.l a0,COP1LC(a6)
@@ -81,7 +94,8 @@ entry:
  ; TODO(lucasw) what does ! mean below - if it means negate, then why not leave
  ; out that entirely?
  ;move.w #(DMAF_BLITTER|DMAF_SETCLR!DMAF_COPPER!DMAF_RASTER!DMAF_MASTER),DMACON(a6)
- move.w #%1000000011100000,DMACON(a6)
+ ;        fedcba9876543210
+ move.w #%1000000111000000,DMACON(a6)
  move.w #$001f,DMACON(a6)
  ; INTF_EXTR - is that needed?
  ;move.w #(INTF_SETCLR|INTF_INTEN|INTF_EXTER),INTENA(a6)
@@ -91,12 +105,25 @@ entry:
  bsr.s  doblit
 
 .mainLoop:
+ add.l #1,frame
+ move.l frame,d0
+ lsr.l #3,d0
+ and.l #$0fff,d0
+ move.w d0,COLOR00(a6)
  move.w  #$02a,d0  ;wait for EOFrame
  bsr.s  waitRaster
+ ;bsr.s  wait_vertical_blank
  bra.s .mainLoop
 
 ; VPOSR is in registers.i but is defined as vposr, which I can't find
 VPOSRb      EQU             $004
+
+wait_vertical_blank:
+  move.l CUSTOM+VPOSRb,d0
+  and.l #$1ff00,d0
+  ; this waits for line 300?
+  cmp.l #300<<8,d0
+  bne wait_vertical_blank
 
 waitRaster:  ;wait for rasterline d0.w. Modifies d0-d2/a0.
  move.l #$1ff00,d2
@@ -178,14 +205,21 @@ copper:
  dc.w BPL4PTH,0
  dc.w BPL5PTL,0
  dc.w BPL5PTH,0
-
-
  dc.l $fffffffe
+ CNOP 0,4
+
+frame:
+ dc.l 0
+ CNOP 0,4
+
 bitplanes:
- incbin "gimp/mountains.data.raw"
+ incbin "gimp/sky.data.raw"
+ ;incbin "gimp/mountains.data.raw"
+ CNOP 0,4
 
 tc:
  incbin "gimp/explosion.data.raw"
+ CNOP 0,4
 
 gfxbase: dc.l 0 ; TODO(lucasw) moved this from other misc register above, does it matter?
 gfxname:
