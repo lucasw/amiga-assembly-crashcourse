@@ -71,9 +71,6 @@ setup:
   move.w #%1100000000000000,BASEADD+INTENA  ; IRQ set ON
   move.w #%0011111111111111,BASEADD+INTENA  ; IRQ set OFF
 
-main_loop:
-  addq.l #1,frame
-
   ; write instructions into copperlist
   ; TODO(lucasw) couldn't this be done once if they aren't changing?
 
@@ -167,15 +164,12 @@ skip_load_bpl
   ; TODO(lucasw) unless wanting to cycle colors, could store the address
   ; at end of static copper list and then use it below for dynamic copper list stuff?
 
-
-  ; scroll every row the same
-  ; the mountains
-  move.w #BPLCON1,(a6)+  ; BPLCON1
-  move.w #0,(a6)+
-
   ; end of copperlist
   move.l #$fffffffe,(a6)+
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+main_loop:
+  addq.l #1,frame
 
 mouse_test:
   ; if mousebutton/joystick 1 or 2 pressed then exit
