@@ -38,9 +38,6 @@ init:
   jsr -132(a6)  ; Forbid
 
 setup:
-  ; allow all sprites to collide with each other
-  move.b #$f0,BASEADD+CLXCON+1
-
   ; setup displayhardware to show a 640x200px 3 bitplanes playfield
   ; with zero horizontal scroll and zero modulos
   ; move.w #$3200,BPLCON0      ; three bitplanes, single playfield
@@ -48,8 +45,6 @@ setup:
   move.w #$0000,BASEADD+BPLCON1      ; horizontal scroll 0
   ; move.w BPLCON2,d0  ; moving BPLCON2 seems to change it
   move.b #$1f,BASEADD+BPLCON2      ; priority
-
-  ; move.w #$0004,BASEADD+BPLCON2      ; priority
   ; horizontal arrangement- given that the 3 color channels are on one row
   ; bplmod = (width of the playfield * (num bitplanes) - width screen) / 8
   ; move.w #$00c8,BPL1MOD      ; odd modulo
@@ -62,113 +57,47 @@ setup:
   move.w #$f8c1,BASEADD+DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
   move.w #$0038,BASEADD+DDFSTRT      ; DDFSTRT
   move.w #$00d0,BASEADD+DDFSTOP      ; DDFSTOP
-  ;move.w #%1000000111100000,BASEADD+DMACON  ; DMA set ON
   ; enable on bitplanes now
-  move.w #%1000000110000000,BASEADD+DMACON  ; DMA set ON
-  move.w #%0000000001111111,BASEADD+DMACON  ; DMA set OFF
+  move.w #%1000000100000000,BASEADD+DMACON  ; DMA set ON
+  move.w #%0000000011111111,BASEADD+DMACON  ; DMA set OFF
   ;        fedcba9876543210
 
   move.w #%1100000000000000,BASEADD+INTENA  ; IRQ set ON
   move.w #%0011111111111111,BASEADD+INTENA  ; IRQ set OFF
 
-  ; write instructions into copperlist
-  ; TODO(lucasw) couldn't this be done once if they aren't changing?
-
-  ; start setting up copper list
-  move.l #copper_list,a6
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ; mountains bitplanes
-  move.l #sky_data,d0
-  move.w #BPL2PTL,d2
-  move.w #BPL2PTH,d3
-  jsr load_bpl
-
-  move.l #sky_data+16000,d0
-  move.w #BPL4PTL,d2
-  move.w #BPL4PTH,d3
-  jsr load_bpl
-
-  move.l #sky_data+32000,d0
-  move.w #BPL6PTL,d2
-  move.w #BPL6PTH,d3
-  jsr load_bpl
-
-  ;;;;;;;;;;;;;;;;;;;;;;
-  ; mountains bitplanes
-  move.l #mountains_data,d0
-  move.w #BPL1PTL,d2
-  move.w #BPL1PTH,d3
-  jsr load_bpl
-
-  move.l #mountains_data+16000,d0
-  move.w #BPL3PTL,d2
-  move.w #BPL3PTH,d3
-  jsr load_bpl
-
-  move.l #mountains_data+32000,d0
-  move.w #BPL5PTL,d2
-  move.w #BPL5PTH,d3
-  jsr load_bpl
-
-  bra skip_load_bpl
-load_bpl:  ; d0 is the movement amount, d2 is the BPLxPTL, d3 is BPLxPTH
-  ; a6 is the current copper address, d1 should be untouched
-  move.w d2,(a6)+  ; LO-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $0e2 BPL1PTL  Bitplane pointer 1 (low 15 bits)
-  swap d0
-  move.w d3,(a6)+  ; HI-bits of start of bitplane
-  move.w d0,(a6)+    ; go into $0e0 BPL1PTH  Bitplane pointer 1 (high 5 bits)
-  rts
-skip_load_bpl
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
   ; colors, last 3 characters/12 bits are rgb
   ; TODO(lucasw) replace with inc() command to get externally generated palett
   ; playfield 1 - foreground mountains
-  ;move.w #COLOR00,(a6)+
-  ;move.w $0000,(a6)+
-  move.l #COLOR00<<16+$0000,(a6)+
-  move.l #COLOR01<<16+$0000,(a6)+
-  move.l #COLOR02<<16+$0235,(a6)+  ; color 2
-  move.l #COLOR03<<16+$0e01,(a6)+  ; color 3
-  move.l #COLOR04<<16+$0545,(a6)+  ; color 4
-  move.l #COLOR05<<16+$0a36,(a6)+  ; color 5
-  move.l #COLOR06<<16+$0569,(a6)+  ; color 6
-  move.l #COLOR07<<16+$0b83,(a6)+  ; color 7
+  move.w #$0000,BASEADD+COLOR00
+  move.w #$0000,BASEADD+COLOR01
+  move.w #$0235,BASEADD+COLOR02
+  move.w #$0e01,BASEADD+COLOR03
+  move.w #$0545,BASEADD+COLOR04
+  move.w #$0a36,BASEADD+COLOR05
+  move.w #$0569,BASEADD+COLOR06
+  move.w #$0b83,BASEADD+COLOR07
   ; playfield 2 - background sky
-  move.l #COLOR08<<16+$0000,(a6)+  ; color 8
-  move.l #COLOR09<<16+$0fff,(a6)+  ; color 9
-  move.l #COLOR10<<16+$0112,(a6)+  ; color 10
-  move.l #COLOR11<<16+$0324,(a6)+  ; color 11
-  move.l #COLOR12<<16+$0446,(a6)+  ; color 12
-  move.l #COLOR13<<16+$0545,(a6)+  ; color 13
-  move.l #COLOR14<<16+$0946,(a6)+  ; color 14
-  move.l #COLOR15<<16+$0659,(a6)+  ; color 15
-  ; sprite 0,1 - the ship
-  move.l #COLOR16<<16+$0000,(a6)+  ; color 16
-  move.l #COLOR17<<16+$0300,(a6)+  ; color 17
-  move.l #COLOR18<<16+$0b43,(a6)+  ; color 18
-  move.l #COLOR19<<16+$0d98,(a6)+  ; color 19
-  ; sprite 2,3 the fireball
-  move.l #COLOR20<<16+$0000,(a6)+  ; color 20
-  move.l #COLOR21<<16+$0fd0,(a6)+  ; color 21
-  move.l #COLOR22<<16+$0ffc,(a6)+  ; color 22
-  move.l #COLOR23<<16+$0fff,(a6)+  ; color 23
-  ; sprite 4,5 - enemy bugs
-  move.l #COLOR24<<16+$0000,(a6)+  ; color 25
-  move.l #COLOR25<<16+$0437,(a6)+  ; color 26
-  move.l #COLOR26<<16+$084a,(a6)+  ; color 27
-  move.l #COLOR27<<16+$06ab,(a6)+  ; color 29
-  ; sprite 6,7 - enemy bugs?
-  ; TODO(lucasw) fill these colors in
-  ; TODO(lucasw) unless wanting to cycle colors, could store the address
-  ; at end of static copper list and then use it below for dynamic copper list stuff?
-
-  ; end of copperlist
-  move.l #$fffffffe,(a6)+
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  move.w #$0000,BASEADD+COLOR08
+  move.w #$0fff,BASEADD+COLOR09
+  move.w #$0112,BASEADD+COLOR10
+  move.w #$0324,BASEADD+COLOR11
+  move.w #$0446,BASEADD+COLOR12
+  move.w #$0545,BASEADD+COLOR13
+  move.w #$0946,BASEADD+COLOR14
+  move.w #$0659,BASEADD+COLOR15
 
 main_loop:
+  ; have to write these every vblank
+  ; sky bitplanes
+  move.l #sky_data,BASEADD+BPL2PTH
+  move.l #sky_data+16000,BASEADD+BPL4PTH
+  move.l #sky_data+32000,BASEADD+BPL6PTH
+  ; mountains bitplanes
+  move.l #mountains_data,BASEADD+BPL1PTH
+  move.l #mountains_data+16000,BASEADD+BPL3PTH
+  move.l #mountains_data+32000,BASEADD+BPL5PTH
+
   addq.l #1,frame
 
 mouse_test:
@@ -187,11 +116,6 @@ wait_vertical_blank:
   cmp.l #300<<8,d0
   bne wait_vertical_blank
 
-  ; Take copper list into use - but only after above updates have been made?
-  move.l #copper_list,a6
-  move.l a6,BASEADD+COP1LCH  ; this is automatically used at beginning of each vertical blank
-
-  ;;;;;;;;;;;;;
   bra main_loop
 
 exit:
@@ -262,8 +186,3 @@ mountains_data:  ; TODO(lucasw) what address is this actually?
   incbin "gimp/mountains.data.raw"
   ; datalists aligned to 32-bit
   CNOP 0,4
-
-copper_list:
-  dc.l $ffffffe ; end of copper list
-  blk.l 1023,0  ; allocate 1023 instructions?
-
