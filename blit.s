@@ -87,6 +87,15 @@ setup:
   move.w #$0946,BASEADD+COLOR14
   move.w #$0659,BASEADD+COLOR15
 
+  ; modify bitplane data for debug
+  ;bra skip_modify_bpl
+  move.l #$1f40,d0
+  move.l #sky_data+32000,a1
+.drawbpl:
+  move.w d0,(a1)+
+  dbra d0,.drawbpl
+skip_modify_bpl:
+
 main_loop:
   ; have to write these every vblank
   ; sky bitplanes
@@ -184,5 +193,7 @@ sky_data:  ; TODO(lucasw) what address is this actually?
   CNOP 0,4
 mountains_data:  ; TODO(lucasw) what address is this actually?
   incbin "gimp/mountains.data.raw"
-  ; datalists aligned to 32-bit
+  CNOP 0,4
+tc:
+  incbin "gimp/explosion.data.raw"
   CNOP 0,4
