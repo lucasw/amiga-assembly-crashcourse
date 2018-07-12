@@ -72,11 +72,7 @@ setup:
   move.w #%0011111111111111,BASEADD+INTENA  ; IRQ set OFF
 
 main_loop:
-  ; increment frame count
   addq.l #1,frame
-  ;move.l frame,d1
-  ;addq.l #1,d1
-  ;move.l d1,frame
 
   ; write instructions into copperlist
   ; TODO(lucasw) couldn't this be done once if they aren't changing?
@@ -85,45 +81,34 @@ main_loop:
   move.l #copper_list,a6
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ; mountains bitplanes
-
-  move.l frame,d1
-  lsr #7,d1 ; scroll slowly
   move.l #sky_data,d0
-  add.w d1,d0  ; scroll 8 pixels per increment
   move.w #BPL2PTL,d2
   move.w #BPL2PTH,d3
   jsr load_bpl
 
   move.l #sky_data+16000,d0
-  add.l d1,d0
   move.w #BPL4PTL,d2
   move.w #BPL4PTH,d3
   jsr load_bpl
 
   move.l #sky_data+32000,d0
-  add.l d1,d0
   move.w #BPL6PTL,d2
   move.w #BPL6PTH,d3
   jsr load_bpl
 
   ;;;;;;;;;;;;;;;;;;;;;;
   ; mountains bitplanes
-  move.l pf_scroll_x,d1
-  lsr #3,d1  ; divide by 8 for byte scroll value
   move.l #mountains_data,d0
-  add.w d1,d0  ; scroll 8 pixels when scroll_x/8 increments
   move.w #BPL1PTL,d2
   move.w #BPL1PTH,d3
   jsr load_bpl
 
   move.l #mountains_data+16000,d0
-  add.w d1,d0
   move.w #BPL3PTL,d2
   move.w #BPL3PTH,d3
   jsr load_bpl
 
   move.l #mountains_data+32000,d0
-  add.w d1,d0
   move.w #BPL5PTL,d2
   move.w #BPL5PTH,d3
   jsr load_bpl
@@ -186,23 +171,7 @@ skip_load_bpl
   ; scroll every row the same
   ; the mountains
   move.w #BPLCON1,(a6)+  ; BPLCON1
-  move.l pf_scroll_x,d2
-  and.w #$000f,d2  ; only take last four bits for scroll within 1 byte
-  move.w #$f,d3
-  ; reverse direction because scrolling right
-  sub.w d2,d3
-  ; scroll playfield2 slowerr
-  ; the sky
-  move.l frame,d2
-  lsr #4,d2  ; slow down the scrolling
-  and.w #$000f,d2
-  move.w #$f,d4
-  ; reverse direction because scrolling right
-  sub.w d2,d4
-  ; combine the two scroll values
-  lsl.w #4,d4
-  add.w d4,d3
-  move.w d3,(a6)+
+  move.w #0,(a6)+
 
   ; end of copperlist
   move.l #$fffffffe,(a6)+
@@ -271,15 +240,6 @@ oldadkcon: dc.w 0
 frame:
   dc.l 0
   ; storage for 16-bit data
-  CNOP 0,4
-pf_scroll_x:
-  dc.l 0
-  CNOP 0,4
-blit_yx
-  dc.w 0  ; y
-  dc.w 0  ; x
-do_blit:
-  dc.b 0
   CNOP 0,4
 old_ciaapra:
   dc.l 0
