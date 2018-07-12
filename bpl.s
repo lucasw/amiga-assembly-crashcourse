@@ -40,7 +40,7 @@ init:
 setup:
   ; setup displayhardware to show a 640x200px 3 bitplanes playfield
   ; with zero horizontal scroll and zero modulos
-  ; move.w #$3200,BPLCON0      ; three bitplanes, single playfield
+  ;move.w #$3200,BASEADD+BPLCON0      ; three bitplanes, single playfield
   move.w #$6600,BASEADD+BPLCON0      ; three bitplanes, dual playfield
   move.w #$0000,BASEADD+BPLCON1      ; horizontal scroll 0
   ; move.w BPLCON2,d0  ; moving BPLCON2 seems to change it

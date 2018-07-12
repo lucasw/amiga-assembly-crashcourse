@@ -1,33 +1,34 @@
-; adapted from https://github.com/alpine9000/amiga_examples
- include "include/registers.i"
- include "hardware/dmabits.i"
- include "hardware/intbits.i"
+  include registers.s
 
-LVL3_INT_VECTOR  equ $6c
-PLAYFIELD_WIDTH  equ 640
-PLAYFIELD_HEIGHT  equ 200
-PLAYFIELD_WIDTH_BYTES equ (PLAYFIELD_WIDTH/8)
-PLAYFIELD_BIT_DEPTH equ 3
-PLAYFIELD_RES  equ 8  ; 8=lo resolution, 4=hi resolution
-RASTER_X_START  equ $81 ; hard coded coordinates from hardware manual
-RASTER_Y_START  equ $2c
-SCREEN_WIDTH equ 320
-SCREEN_HEIGHT equ 256
-RASTER_X_STOP  equ RASTER_X_START+SCREEN_WIDTH
-RASTER_Y_STOP  equ RASTER_Y_START+SCREEN_HEIGHT
+SCREEN_WIDTH EQU 320
+PF_WIDTH EQU 640
 
-  ;bra entry
-setup:
-  ; copied from reactor source.asm - is it needed?
-  ; maybe only needed if want to exit back to workbench
+backup:
+  ; store data in hardwareregisters ORed with $8000
+  ;(bit 15 is a write-set bit when values are written back into the system)
+  move.w BASEADD+DMACONR,d0
+  or.w #$8000,d0
+  move.w d0,olddmareq
+  move.w BASEADD+INTENAR,d0
+  or.w #$8000,d0
+  move.w d0,oldintena
+  move.w BASEADD+INTREQR,d0
+  or.w #$8000,d0
+  move.w d0,oldintreq
+  move.w BASEADD+ADKCONR,d0
+  or.w #$8000,d0
+  move.w d0,oldadkcon
+
+init:
+  ; boiler plate stuff, just get blank screen without
   move.l $4,a6
   move.l #gfxname,a1
   moveq  #0,d0
   jsr  -552(a6)
   move.l d0,gfxbase
   move.l d0,a6
-  ;move.l 34(a6),oldview
-  ;move.l 38(a6),oldcopper
+  move.l 34(a6),oldview
+  move.l 38(a6),oldcopper
 
   move.l #0,a1
   jsr -222(a6)  ; LoadView
@@ -36,220 +37,152 @@ setup:
   move.l $4,a6
   jsr -132(a6)  ; Forbid
 
-entry:
+setup:
+  ; setup displayhardware to show a 640x200px 3 bitplanes playfield
+  ; with zero horizontal scroll and zero modulos
+  ;move.w #$3200,BASEADD+BPLCON0      ; three bitplanes, single playfield
+  move.w #$6600,BASEADD+BPLCON0      ; three bitplanes, dual playfield
+  move.w #$0000,BASEADD+BPLCON1      ; horizontal scroll 0
+  ; move.w BPLCON2,d0  ; moving BPLCON2 seems to change it
+  move.b #$1f,BASEADD+BPLCON2      ; priority
+  ; horizontal arrangement- given that the 3 color channels are on one row
+  ; bplmod = (width of the playfield * (num bitplanes) - width screen) / 8
+  ; move.w #$00c8,BPL1MOD      ; odd modulo
+  ; move.w #$00c8,BPL2MOD      ; even modulo
+  ; vertical arrangement
+  ; bplmod = (width of the playfield - width screen) / 8
+  move.w #(PF_WIDTH-SCREEN_WIDTH)/8,BASEADD+BPL1MOD      ; odd modulo
+  move.w #(PF_WIDTH-SCREEN_WIDTH)/8,BASEADD+BPL2MOD      ; even modulo
+  move.w #$2c91,BASEADD+DIWSTRT      ; DIWSTRT - topleft corner (2c81)
+  move.w #$f8c1,BASEADD+DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
+  move.w #$0038,BASEADD+DDFSTRT      ; DDFSTRT
+  move.w #$00d0,BASEADD+DDFSTOP      ; DDFSTOP
+  ; enable on bitplanes now
+  move.w #%1000000100000000,BASEADD+DMACON  ; DMA set ON
+  move.w #%0000000011111111,BASEADD+DMACON  ; DMA set OFF
+  ;        fedcba9876543210
 
- ;; custom chip base globally in a6
- lea  CUSTOM,a6
+  move.w #%1100000000000000,BASEADD+INTENA  ; IRQ set ON
+  move.w #%0011111111111111,BASEADD+INTENA  ; IRQ set OFF
 
- move #$7ff,DMACON(a6) ; disable all dma
- move #$7fff,INTENA(a6) ; disable all interrupts
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ; colors, last 3 characters/12 bits are rgb
+  ; TODO(lucasw) replace with inc() command to get externally generated palett
+  ; playfield 1 - foreground mountains
+  move.w #$0000,BASEADD+COLOR00
+  move.w #$0000,BASEADD+COLOR01
+  move.w #$0235,BASEADD+COLOR02
+  move.w #$0e01,BASEADD+COLOR03
+  move.w #$0545,BASEADD+COLOR04
+  move.w #$0a36,BASEADD+COLOR05
+  move.w #$0569,BASEADD+COLOR06
+  move.w #$0b83,BASEADD+COLOR07
+  ; playfield 2 - background sky
+  move.w #$0000,BASEADD+COLOR08
+  move.w #$0fff,BASEADD+COLOR09
+  move.w #$0112,BASEADD+COLOR10
+  move.w #$0324,BASEADD+COLOR11
+  move.w #$0446,BASEADD+COLOR12
+  move.w #$0545,BASEADD+COLOR13
+  move.w #$0946,BASEADD+COLOR14
+  move.w #$0659,BASEADD+COLOR15
 
- include "out/image-palette.s"
+main_loop:
+  ; have to write these every vblank
+  ; sky bitplanes
+  move.l #sky_data,BASEADD+BPL2PTH
+  move.l #sky_data+16000,BASEADD+BPL4PTH
+  move.l #sky_data+32000,BASEADD+BPL6PTH
+  ; mountains bitplanes
+  move.l #mountains_data,BASEADD+BPL1PTH
+  move.l #mountains_data+16000,BASEADD+BPL3PTH
+  move.l #mountains_data+32000,BASEADD+BPL5PTH
 
- ;; set up playfield
- move.w #(RASTER_Y_START<<8)|RASTER_X_START,DIWSTRT(a6)
- move.w #((RASTER_Y_STOP-256)<<8)|(RASTER_X_STOP-256),DIWSTOP(a6)
+  addq.l #1,frame
 
- move.w #(RASTER_X_START/2-PLAYFIELD_RES),DDFSTRT(a6)
- move.w #(RASTER_X_START/2-PLAYFIELD_RES)+(8*((SCREEN_WIDTH/16)-1)),DDFSTOP(a6)
- ;move.w #$0038,DDFSTRT(a6)
- ;move.w #$00d0,DDFSTOP(a6)
+mouse_test:
+  ; if mousebutton/joystick 1 or 2 pressed then exit
+  ; mouse/joy button 1
+  btst.b #6,CIAAPRA
+  beq exit
+  ; btst.b #7,CIAAPRA
+  ; beq exit
 
- ; the $200 enables coolor
- move.w #(PLAYFIELD_BIT_DEPTH<<12)|$200,BPLCON0(a6)
- move.w #$0000,BPLCON1(a6)  ; no scroll
- move.w #$003f,BPLCON2(a6)  ; priority
- move.w #PLAYFIELD_WIDTH_BYTES-TC_WIDTH_BYTES,BLTDMOD(a6) ;D modulo
- ; using vertical memory arrangement- 640x600
- move.w #(PLAYFIELD_WIDTH-SCREEN_WIDTH)/8,BPL1MOD(a6)
- ; move.w #PLAYFIELD_WIDTH_BYTES*PLAYFIELD_BIT_DEPTH-PLAYFIELD_WIDTH_BYTES,BPL2MOD(a6)
- move.w #(PLAYFIELD_WIDTH-SCREEN_WIDTH)/8,BPL2MOD(a6)
-
- ;; poke bitplane pointers in copper list
- bra skip_bpl
- ;lea bitplanes(pc),a1
- lea     copper(pc),a2
- moveq #PLAYFIELD_BIT_DEPTH-1,d0
-.bitplaneloop:
- move.l  a1,d1
- move.w d1,2(a2)
- swap d1
- move.w  d1,6(a2)
- ; lea PLAYFIELD_WIDTH_BYTES(a1),a1 ; bit plane data is interleaved
- add.l #(PLAYFIELD_WIDTH_BYTES*PLAYFIELD_HEIGHT),a1 ; bit plane data is not interleaved
- addq #8,a2
- dbra d0,.bitplaneloop
-skip_bpl:
-
- ; modify bitplane data for debug
- bra skip_modify_bpl
- move.l #$fa0,d0
- move.l #bitplanes,a1
-.drawbpl:
- move.l d0,(a1)
- add.l #4,a1
- dbra d0,.drawbpl
-skip_modify_bpl:
-
- ;; install copper list, then enable dma and selected interrupts
- ;lea copper(pc),a0
- ;move.l a0,COP1LC(a6)
- ;move.w  COPJMP1(a6),d0
- ; MASTER = DMAEN
- ; RASTER = BPLEN
- ; TODO(lucasw) what does ! mean below - if it means negate, then why not leave
- ; out that entirely?
- ;move.w #(DMAF_BLITTER|DMAF_SETCLR!DMAF_COPPER!DMAF_RASTER!DMAF_MASTER),DMACON(a6)
- ; 8 BPLEN
- ; 7 COPEN
- ; 6 BLTEN
- ; 5 SPREN
- ;        fedcba9876543210
- move.w #%1000000100000000,DMACON(a6)
- move.w #%0000000011111111,DMACON(a6)
- ; INTF_EXTR - is that needed?
- ;move.w #(INTF_SETCLR|INTF_INTEN|INTF_EXTER),INTENA(a6)
- move.w #%1100000000000000,INTENA(a6)  ; IRQ set ON
- move.w #%0011111111111111,INTENA(a6)  ; IRQ set OFF
-
- ;bsr.s  doblit
-
-.mainLoop:
- ; vertical blank is happening at start of main loop,
- ; but with enough code here need to know when it is over
-
- ; alternate bitplane register loading, has to be done during every vertical blank
- ; by cpu or copper, so using cpu here
-;bpl_set:
- move.l #bitplanes,BPL1PT(a6)
- move.l #bitplanes+16000,BPL2PT(a6)
- move.l #bitplanes+32000,BPL3PT(a6)
- move.l #bitplanes,BPL4PT(a6)
- move.l #bitplanes+16000,BPL5PT(a6)
- move.l #bitplanes+32000,BPL6PT(a6)
-;skip_bpl_set:
-
- ; cycle background color to see something happening
- add.l #1,frame
- move.l frame,d0
- lsr.l #3,d0
- and.l #$0fff,d0
- move.w d0,COLOR00(a6)
- move.w  #$02a,d0  ;wait for EOFrame
- bsr.s  waitRaster
- ;bsr.s  wait_vertical_blank
- bra .mainLoop
-
-; VPOSR is in registers.i but is defined as vposr, which I can't find
-VPOSRb      EQU             $004
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Wait for vertical blanking before taking the copper list into use
 wait_vertical_blank:
-  move.l CUSTOM+VPOSRb,d0
+  move.l BASEADD+VPOSR,d0
   and.l #$1ff00,d0
-  ; this waits for line 300?
   cmp.l #300<<8,d0
   bne wait_vertical_blank
 
-waitRaster:  ;wait for rasterline d0.w. Modifies d0-d2/a0.
- move.l #$1ff00,d2
- lsl.l #8,d0
- and.l d2,d0
- lea CUSTOM+VPOSRb,a0
-.wr: move.l (a0),d1
- and.l d2,d1
- cmp.l d1,d0
- bne.s .wr
- rts
+  bra main_loop
 
-blitWait:
- tst DMACONR(a6)  ;for compatibility
-.waitblit:
- btst #6,DMACONR(a6)
- bne.s .waitblit
- rts
+exit:
+; exit gracefully - reverse everything done in init
+  move.w #$7fff,BASEADD+DMACON
+  move.w olddmareq,BASEADD+DMACON
+  move.w #$7fff,BASEADD+INTENA
+  move.w oldintena,BASEADD+INTENA
+  move.w #$7fff,BASEADD+INTREQ
+  move.w oldintreq,BASEADD+INTREQ
+  move.w #$7fff,BASEADD+ADKCON
+  move.w oldadkcon,BASEADD+ADKCON
 
-TC_WIDTH  equ 32
-TC_HEIGHT equ 32
-TC_WIDTH_BYTES equ TC_WIDTH/8
-TC_WIDTH_WORDS equ TC_WIDTH/16
-TC_XPOS  equ 16
-TC_YPOS  equ 16
-TC_XPOS_BYTES equ  (TC_XPOS)/8
+  move.l oldcopper,BASEADD+COP1LCH
+  move.l gfxbase,a6
+  move.l oldview,a1
+  jsr -222(a6)  ; LoadView
+  jsr -270(a6)  ; WaitTOF
+  jsr -270(a6)  ; WaitTOF
+  move.l $4,a6
+  jsr -138(a6)  ; Permit
 
-;; BLTCON? configuration
+  ; end program
+  rts
 
-;; http://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node011C.html
-;; blitter logic function minterm truth table
-;; fill in D column for desired function
-;;       A       B       C       D
-;;       -       -       -       -
-;;       0       0       0       0
-;;       0       0       1       0
-;;       0       1       0       0
-;;       0       1       1       0
-;;       1       0       0       1
-;;       1       0       1       1
-;;       1       1       0       1
-;;       1       1       1       1
-;;
-;; then read D column from bottom up = 11110000 = $f0
-;; this is used in the LF? bits
-BLIT_LF_MINTERM  equ $f0
-BLIT_A_SOURCE_SHIFT equ 0
-BLIT_DEST  equ $100
-BLIT_SRCC      equ $200
-BLIT_SRCB      equ $400
-BLIT_SRCA      equ $800
-BLIT_ASHIFTSHIFT equ 12   ;Bit index of ASH? bits
-BLIT_BLTCON1  equ 0    ;BSH?=0, DOFF=0, EFE=0, IFE=0, FCI=0, DESC=0, LINE=0
+; *******************************************************************************
+; *******************************************************************************
+; DATA
+; *******************************************************************************
+; *******************************************************************************
 
-doblit:
- movem.l d0-a6,-(sp)
- bsr blitWait
- move.w #(BLIT_SRCA|BLIT_DEST|BLIT_LF_MINTERM|BLIT_A_SOURCE_SHIFT<<BLIT_ASHIFTSHIFT),BLTCON0(A6)
- move.w #BLIT_BLTCON1,BLTCON1(a6)
- move.l #$ffffffff,BLTAFWM(a6)  ;no masking of first/last word
- move.w #0,BLTAMOD(a6)        ;A modulo=bytes to skip between lines
- move.w #PLAYFIELD_WIDTH_BYTES-TC_WIDTH_BYTES,BLTDMOD(a6) ;D modulo
- move.l #tc,BLTAPTH(a6)  ;source graphic top left corner
- ;move.l #bitplanes+TC_XPOS_BYTES+(PLAYFIELD_WIDTH_BYTES*PLAYFIELD_BIT_DEPTH*TC_YPOS),BLTDPTH(a6) ;destination top left corner
- move.l #bitplanes+TC_XPOS_BYTES+(PLAYFIELD_WIDTH_BYTES*TC_YPOS),BLTDPTH(a6) ;destination top left corner
- move.w #(TC_HEIGHT*PLAYFIELD_BIT_DEPTH)<<6|(TC_WIDTH_WORDS),BLTSIZE(a6) ;rectangle size, starts blit
- movem.l (sp)+,d0-a6
- rts
-
-copper:
- ;; bitplane pointers must be first else poking addresses will be incorrect
- dc.w BPL1PTL,0
- dc.w BPL1PTH,0
- dc.w BPL2PTL,0
- dc.w BPL2PTH,0
- dc.w BPL3PTL,0
- dc.w BPL3PTH,0
- dc.w BPL4PTL,0
- dc.w BPL4PTH,0
- dc.w BPL5PTL,0
- dc.w BPL5PTH,0
- dc.l $fffffffe
- CNOP 0,4
-
+; storage for 32-bit addresses and data
+  CNOP 0,4
+oldview: dc.l 0
+oldcopper: dc.l 0
+olddmareq: dc.w 0
+oldintreq: dc.w 0
+oldintena: dc.w 0
+oldadkcon: dc.w 0
 frame:
- dc.l 0
- CNOP 0,4
+  dc.l 0
+  ; storage for 16-bit data
+  CNOP 0,4
+old_ciaapra:
+  dc.l 0
+  CNOP 0,4
 
-; because of the Section below, all the memory below will also be in ChipRAM
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Chip RAM
+; DMA (chip-ram) memory is 0x0 - 0x7FFFF
+; TODO(lucasw) all data after this chip ram, and what is above is allocated elsewhere?
+; so anything below this can be used by the copper list, but the stuff above
+; needs to be copied into chip ram by the program.
+; Maybe should allocate a big section here instead of using 25000 above
+; 0 - 0x7FFFF
 gfxbase: dc.l 0 ; TODO(lucasw) moved this from other misc register above, does it matter?
 gfxname:
   dc.b 'graphics.library',0
   Section ChipRAM,Data_c
   CNOP 0,4
 
-bitplanes:
- incbin "gimp/sky.data.raw"
- ;incbin "gimp/mountains.data.raw"
- CNOP 0,4
-
-tc:
- incbin "gimp/explosion.data.raw"
- CNOP 0,4
-
+; TODO(lucasw) make slots for all the sprites that need to be used live
+sky_data:  ; TODO(lucasw) what address is this actually?
+  incbin "gimp/sky.data.raw"
+  ; datalists aligned to 32-bit
+  CNOP 0,4
+mountains_data:  ; TODO(lucasw) what address is this actually?
+  incbin "gimp/mountains.data.raw"
+  ; datalists aligned to 32-bit
+  CNOP 0,4
