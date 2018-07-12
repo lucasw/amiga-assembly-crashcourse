@@ -100,23 +100,30 @@ setup:
   move.w #$0946,BASEADD+COLOR14
   move.w #$0659,BASEADD+COLOR15
 
-  ; modify bitplane data for debug
-  bra skip_modify_bpl
-  move.l #$1f40,d0
-  move.l #sky_data+32000,a1
+  ; modify image data for debug
+  ;bra skip_modify_bpl
+  ;move.l #$1f40,d0
+  move.l #(BL_WIDTH_BYTES*BL_HEIGHT*PF_BIT_DEPTH/2-1),d0
+  ;move.l #sky_data+32000,a1
+  move.l #bl_data,a1
 .drawbpl:
   move.w d0,(a1)+
   dbra d0,.drawbpl
 skip_modify_bpl:
 
 do_blit:
-BL_X EQU 16
-BL_Y EQU 20
+BL_X EQU 96
+BL_Y EQU 80
 BL_X_BYTES EQU BL_X/8
 BLIT_BLTCON1  equ 0    ;BSH?=0, DOFF=0, EFE=0, IFE=0, FCI=0, DESC=0, LINE=0
 BLIT_LF_MINTERM  equ $f0
 BLIT_A_SOURCE_SHIFT equ 0
 
+  move.l #2,d0
+  move.l #bl_data,a1
+  move.l #sky_data,a2
+  add.l #(PF_WIDTH_BYTES*BL_Y)+BL_X_BYTES,a2
+  ; loop through 3 bit planes
   jsr blit_wait
   move.w #(BLIT_SRCA|BLIT_DEST|BLIT_LF_MINTERM|BLIT_A_SOURCE_SHIFT<<BLIT_ASHIFTSHIFT),BASEADD+BLTCON0
   ; 01ff should write solid 1s to D
@@ -126,9 +133,14 @@ BLIT_A_SOURCE_SHIFT equ 0
   move.l #$ffffffff,BASEADD+BLTAFWM
   move.w #0,BASEADD+BLTAMOD
   move.w #PF_WIDTH_BYTES-BL_WIDTH_BYTES,BASEADD+BLTDMOD
-  move.l #bl_data+128,BASEADD+BLTAPTH
-  move.l #sky_data+32000+(PF_WIDTH_BYTES*BL_Y)+BL_X_BYTES,BASEADD+BLTDPTH
+.blit_loop:
+  jsr blit_wait
+  move.l a1,BASEADD+BLTAPTH
+  move.l a2,BASEADD+BLTDPTH
   move.w #(BL_HEIGHT<<6)|(BL_WIDTH_WORDS),BASEADD+BLTSIZE
+  add.l #(BL_WIDTH_BYTES*BL_HEIGHT),a1
+  add.l #16000,a2
+  dbra d0,.blit_loop
 end_blit:
 
 main_loop:
