@@ -1,7 +1,16 @@
   include registers.s
 
 SCREEN_WIDTH EQU 320
+SCREEN_HEIGHT EQU 200
 PF_WIDTH EQU 640
+PF_HEIGHT EQU 200
+PF_WIDTH_BYTES EQU PF_WIDTH/8
+PF_WIDTH_WORDS EQU PF_WIDTH/16
+PF_BIT_DEPTH EQU 3
+BL_WIDTH EQU 32
+BL_HEIGHT EQU 32
+BL_WIDTH_BYTES EQU BL_WIDTH/8
+BL_WIDTH_WORDS EQU BL_WIDTH/16
 
 backup:
   ; store data in hardwareregisters ORed with $8000
@@ -20,7 +29,11 @@ backup:
   move.w d0,oldadkcon
 
 init:
-  ; boiler plate stuff, just get blank screen without
+  ; boiler plate stuff
+  move #$7ff,DMACON(a6) ; disable all dma
+  move #$7fff,INTENA(a6) ; disable all interrupts
+
+  ; just get blank screen without this
   move.l $4,a6
   move.l #gfxname,a1
   moveq  #0,d0
@@ -47,8 +60,6 @@ setup:
   move.b #$1f,BASEADD+BPLCON2      ; priority
   ; horizontal arrangement- given that the 3 color channels are on one row
   ; bplmod = (width of the playfield * (num bitplanes) - width screen) / 8
-  ; move.w #$00c8,BPL1MOD      ; odd modulo
-  ; move.w #$00c8,BPL2MOD      ; even modulo
   ; vertical arrangement
   ; bplmod = (width of the playfield - width screen) / 8
   move.w #(PF_WIDTH-SCREEN_WIDTH)/8,BASEADD+BPL1MOD      ; odd modulo
@@ -57,9 +68,11 @@ setup:
   move.w #$f8c1,BASEADD+DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
   move.w #$0038,BASEADD+DDFSTRT      ; DDFSTRT
   move.w #$00d0,BASEADD+DDFSTOP      ; DDFSTOP
+
+
   ; enable on bitplanes now
-  move.w #%1000000100000000,BASEADD+DMACON  ; DMA set ON
-  move.w #%0000000011111111,BASEADD+DMACON  ; DMA set OFF
+  move.w #%1000000101000000,BASEADD+DMACON  ; DMA set ON
+  move.w #%0000000010111111,BASEADD+DMACON  ; DMA set OFF
   ;        fedcba9876543210
 
   move.w #%1100000000000000,BASEADD+INTENA  ; IRQ set ON
@@ -88,13 +101,35 @@ setup:
   move.w #$0659,BASEADD+COLOR15
 
   ; modify bitplane data for debug
-  ;bra skip_modify_bpl
+  bra skip_modify_bpl
   move.l #$1f40,d0
   move.l #sky_data+32000,a1
 .drawbpl:
   move.w d0,(a1)+
   dbra d0,.drawbpl
 skip_modify_bpl:
+
+do_blit:
+BL_X EQU 16
+BL_Y EQU 20
+BL_X_BYTES EQU BL_X/8
+BLIT_BLTCON1  equ 0    ;BSH?=0, DOFF=0, EFE=0, IFE=0, FCI=0, DESC=0, LINE=0
+BLIT_LF_MINTERM  equ $f0
+BLIT_A_SOURCE_SHIFT equ 0
+
+  jsr blit_wait
+  ; move.w #(BLIT_SRCA|BLIT_DEST|BLIT_LF_MINTERM|BLIT_A_SOURCE_SHIFT<<BLIT_ASHIFTSHIFT),BASEADD+BLTCON0
+  ; 01ff should write solid 1s to D
+  move.w #$01ff,BASEADD+BLTCON0
+  move.w #BLIT_BLTCON1,BASEADD+BLTCON1
+  ;bra end_blit
+  move.l #$ffffffff,BASEADD+BLTAFWM
+  move.w #128,BASEADD+BLTAMOD
+  move.w #PF_WIDTH_BYTES-BL_WIDTH_BYTES,BASEADD+BLTDMOD
+  move.l #bl_data,BASEADD+BLTAPTH
+  move.l #sky_data+32000+(PF_WIDTH_BYTES*BL_Y)+BL_X_BYTES,BASEADD+BLTDPTH
+  move.w #(BL_HEIGHT<<6)|(BL_WIDTH_WORDS),BASEADD+BLTSIZE
+end_blit:
 
 main_loop:
   ; have to write these every vblank
@@ -126,6 +161,13 @@ wait_vertical_blank:
   bne wait_vertical_blank
 
   bra main_loop
+
+blit_wait:
+  tst BASEADD+DMACONR  ; for compatibility
+.wait_blit:
+  btst #6,BASEADD+DMACONR
+  bne.s .wait_blit
+  rts
 
 exit:
 ; exit gracefully - reverse everything done in init
@@ -194,6 +236,6 @@ sky_data:  ; TODO(lucasw) what address is this actually?
 mountains_data:  ; TODO(lucasw) what address is this actually?
   incbin "gimp/mountains.data.raw"
   CNOP 0,4
-tc:
+bl_data:
   incbin "gimp/explosion.data.raw"
   CNOP 0,4

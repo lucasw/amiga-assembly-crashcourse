@@ -105,14 +105,14 @@ skip_modify_bpl:
  ; 6 BLTEN
  ; 5 SPREN
  ;        fedcba9876543210
- move.w #%1000000100000000,DMACON(a6)
- move.w #%0000000011111111,DMACON(a6)
+ move.w #%1000000111000000,DMACON(a6)
+ move.w #%0000000000111111,DMACON(a6)
  ; INTF_EXTR - is that needed?
  ;move.w #(INTF_SETCLR|INTF_INTEN|INTF_EXTER),INTENA(a6)
  move.w #%1100000000000000,INTENA(a6)  ; IRQ set ON
  move.w #%0011111111111111,INTENA(a6)  ; IRQ set OFF
 
- ;bsr.s  doblit
+ jsr  doblit
 
 .mainLoop:
  ; vertical blank is happening at start of main loop,

@@ -8,7 +8,7 @@ INTENAR    EQU    $01c
 INTREQR    EQU    $01e
 
 BLTCON0  EQU $040
-BLTCON1  EQU $041
+BLTCON1  EQU $042
 BLTAFWM  EQU $044
 BLTALWM  EQU $046
 
@@ -30,6 +30,32 @@ BLTCMOD  EQU $060  ; modulo source C
 BLTBMOD  EQU $062  ; modulo source B
 BLTAMOD  EQU $064  ; modulo source A
 BLTDMOD  EQU $066  ; modulo destination D
+
+;; BLTCON? configuration
+
+;; http://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node011C.html
+;; blitter logic function minterm truth table
+;; fill in D column for desired function
+;;       A       B       C       D
+;;       -       -       -       -
+;;       0       0       0       0
+;;       0       0       1       0
+;;       0       1       0       0
+;;       0       1       1       0
+;;       1       0       0       1
+;;       1       0       1       1
+;;       1       1       0       1
+;;       1       1       1       1
+;;
+;; then read D column from bottom up = 11110000 = $f0
+;; this is used in the LF? bits
+BLIT_DEST  equ $100
+BLIT_SRCC      equ $200
+BLIT_SRCB      equ $400
+BLIT_SRCA      equ $800
+BLIT_ASHIFTSHIFT equ 12   ;Bit index of ASH? bits
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 DMACON    EQU    $096
 ADKCON    EQU    $09e
