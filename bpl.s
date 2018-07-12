@@ -3,7 +3,7 @@
 SCREEN_WIDTH EQU 320
 PF_WIDTH EQU 640
 
-init:
+backup:
   ; store data in hardwareregisters ORed with $8000
   ;(bit 15 is a write-set bit when values are written back into the system)
   move.w BASEADD+DMACONR,d0
@@ -19,6 +19,8 @@ init:
   or.w #$8000,d0
   move.w d0,oldadkcon
 
+init:
+  ; boiler plate stuff, just get blank screen without
   move.l $4,a6
   move.l #gfxname,a1
   moveq  #0,d0
@@ -35,6 +37,7 @@ init:
   move.l $4,a6
   jsr -132(a6)  ; Forbid
 
+setup:
   ; allow all sprites to collide with each other
   move.b #$f0,BASEADD+CLXCON+1
 
@@ -59,51 +62,12 @@ init:
   move.w #$f8c1,BASEADD+DIWSTOP      ; DIWSTOP - bottomright corner (c8d1)
   move.w #$0038,BASEADD+DDFSTRT      ; DDFSTRT
   move.w #$00d0,BASEADD+DDFSTOP      ; DDFSTOP
-; DMACON
-;15  SET/CLR Set/Clear control bit. Determines if bits
-;written with a 1 get set or cleared
-;Bits written with a zero are unchanged
-;14  BBUSY Blitter busy status bit (read only)
-;13  BZERO Blitter logic zero status bit (read only)
-;12  X
-;11  X
-;10  BLTPRI  Blitter DMA priority (over CPU micro)
-;(also called "blitter nasty")
-;(disables /BLS pin, preventing micro
-;from stealing any bus cycles while
-;blitter DMA is running)
-;09  DMAEN Enable all DMA below (also UHRES DMA)
-;08  BPLEN Bit plane DMA enable
-;07  COPEN Coprocessor DMA enable
-;06  BLTEN Blitter DMA enable
-;05  SPREN Sprite DMA enable
-;04  DSKEN Disk DMA enable
-;03  AUD3EN  Audio channel 3 DMA enable
-;02  AUD2EN  Audio channel 2 DMA enable
-;01  AUD1EN  Audio channel 1 DMA enable
-;00  AUD0EN  Audio channel 0 DMA enable
   ;move.w #%1000000111100000,BASEADD+DMACON  ; DMA set ON
+  ; enable on bitplanes now
   move.w #%1000000010000000,BASEADD+DMACON  ; DMA set ON
-  move.w #%0000000000011111,BASEADD+DMACON  ; DMA set OFF
+  move.w #%0000000001111111,BASEADD+DMACON  ; DMA set OFF
+  ;        fedcba9876543210
 
-; 15  SET/CLR   Set/clear control bit. Determines if bits
-; written with a 1 get set or cleared. Bits
-; written with a zero are always unchanged.
-; 14  INTEN   Master interrupt (enable only, no request)
-; 13  EXTER 6 External interrupt
-; 12  DSKSYN  5 Disk sync register (DSKSYNC) matches disk
-; 11  RBF 5 Serial port receive buffer full
-; 10  AUD3  4 Audio channel 3 block finished
-; 09  AUD2  4 Audio channel 2 block finished
-; 08  AUD1  4 Audio channel 1 block finished
-; 07  AUD0  4 Audio channel 0 block finished
-; 06  BLIT  3 Blitter has finished
-; 05  VERTB 3 Start of vertical blank
-; 04  COPER 3 Coprocessor
-; 03  PORTS 2 I/O Ports and timers
-; 02  SOFT  1 Reserved for software initiated interrupt.
-; 01  DSKBLK  1 Disk block finished
-; 00  TBE 1 Serial port transmit buffer empty
   move.w #%1100000000000000,BASEADD+INTENA  ; IRQ set ON
   move.w #%0011111111111111,BASEADD+INTENA  ; IRQ set OFF
 
